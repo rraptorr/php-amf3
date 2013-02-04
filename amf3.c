@@ -111,10 +111,10 @@ struct amf3_env_s {
 /* ============================================================================================================ */
 
 
-static amf3_chunk_t *amf3_initChunk(amf3_chunk_t *chunk) {
-	if (!chunk) {
-		chunk = emalloc(sizeof(*chunk));
-	}
+static amf3_chunk_t *amf3_initChunk() {
+	amf3_chunk_t *chunk;
+
+	chunk = emalloc(sizeof(*chunk));
 	if (!chunk) {
 		return NULL;
 	}
@@ -136,7 +136,7 @@ static amf3_chunk_t *amf3_appendChunk(amf3_chunk_t *chunk, char *buf, int size) 
 		buf += avail;
 		size -= avail;
 		if (!chunk->next) {
-			chunk->next = amf3_initChunk(NULL);
+			chunk->next = amf3_initChunk();
 		}
 		chunk = chunk->next;
 	}
@@ -633,7 +633,7 @@ PHP_FUNCTION(amf3_encode) { // string amf3_encode(mixed value)
 	if (zend_parse_parameters(ZEND_NUM_ARGS(), TSRMLS_C, "z", &val) == FAILURE) {
 		RETURN_FALSE;
 	}
-	amf3_chunk_t *begin = amf3_initChunk(NULL);
+	amf3_chunk_t *begin = amf3_initChunk();
 	amf3_chunk_t *current = begin;
 	amf3_env_t env;
 	amf3_initEnv(&env, 0);
