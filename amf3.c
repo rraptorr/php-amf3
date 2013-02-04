@@ -32,9 +32,7 @@ static zend_function_entry amf3_functions[] = {
 };
 
 zend_module_entry amf3_module_entry = {
-#if ZEND_MODULE_API_NO >= 20010901
 	STANDARD_MODULE_HEADER,
-#endif
 	PHP_AMF3_WORLD_EXTNAME,
 	amf3_functions,
 	NULL,
@@ -42,9 +40,7 @@ zend_module_entry amf3_module_entry = {
 	NULL,
 	NULL,
 	NULL,
-#if ZEND_MODULE_API_NO >= 20010901
 	PHP_AMF3_WORLD_VERSION,
-#endif
 	STANDARD_MODULE_PROPERTIES
 };
 
