@@ -112,7 +112,7 @@ struct amf3_env_s {
 
 
 static amf3_chunk_t *amf3_initChunk(amf3_chunk_t *chunk) {
-	if (!chunk) chunk = malloc(sizeof(*chunk));
+	if (!chunk) chunk = emalloc(sizeof(*chunk));
 	if (!chunk) return NULL;
 	memset(chunk, 0, sizeof(*chunk));
 	return chunk;
@@ -141,7 +141,7 @@ static void amf3_freeChunk(amf3_chunk_t *chunk, char *buf) {
 		next = chunk->next;
 		memcpy(buf, chunk->buf, chunk->size);
 		buf += chunk->size;
-		free(chunk);
+		efree(chunk);
 		chunk = next;
 	}
 }
@@ -528,11 +528,11 @@ static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t 
 							keyBuf[keyLen] = 0;
 							add_assoc_zval_ex(*val, keyBuf, keyLen + 1, hv);
 						} else {
-							char *tmpBuf = malloc(keyLen + 1);
+							char *tmpBuf = emalloc(keyLen + 1);
 							memcpy(tmpBuf, key, keyLen);
 							tmpBuf[keyLen] = 0;
 							add_assoc_zval_ex(*val, tmpBuf, keyLen + 1, hv);
-							free(tmpBuf);
+							efree(tmpBuf);
 						}
 					}
 					if (res < 0) return -1; // nested error
