@@ -1,0 +1,20 @@
+--TEST--
+AMF3 encoding/decoding - integer type
+--FILE--
+<?php
+var_dump(amf3_decode(amf3_encode(0)));
+var_dump(amf3_decode(amf3_encode(1)));
+var_dump(amf3_decode(amf3_encode(-1)));
+var_dump(amf3_decode(amf3_encode(268435455)));
+var_dump(amf3_decode(amf3_encode(-268435456)));
+var_dump(amf3_decode(amf3_encode(268435456)));
+var_dump(amf3_decode(amf3_encode(-268435457)));
+?>
+--EXPECT--
+int(0)
+int(1)
+int(-1)
+int(268435455)
+int(-268435456)
+float(268435456)
+float(-268435457)
