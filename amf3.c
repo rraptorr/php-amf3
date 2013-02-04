@@ -112,22 +112,32 @@ struct amf3_env_s {
 
 
 static amf3_chunk_t *amf3_initChunk(amf3_chunk_t *chunk) {
-	if (!chunk) chunk = emalloc(sizeof(*chunk));
-	if (!chunk) return NULL;
+	if (!chunk) {
+        chunk = emalloc(sizeof(*chunk));
+    }
+	if (!chunk) {
+        return NULL;
+    }
 	memset(chunk, 0, sizeof(*chunk));
 	return chunk;
 }
 
 static amf3_chunk_t *amf3_appendChunk(amf3_chunk_t *chunk, char *buf, int size) {
-	if (!chunk) return NULL;
+	if (!chunk) {
+        return NULL;
+    }
 	for ( ;; ) {
 		int avail = sizeof(chunk->buf) - chunk->size;
-		if (avail >= size) break;
+		if (avail >= size) {
+            break;
+        }
 		memcpy(chunk->buf + chunk->size, buf, avail);
 		chunk->size += avail;
 		buf += avail;
 		size -= avail;
-		if (!chunk->next) chunk->next = amf3_initChunk(NULL);
+		if (!chunk->next) {
+            chunk->next = amf3_initChunk(NULL);
+        }
 		chunk = chunk->next;
 	}
 	memcpy(chunk->buf + chunk->size, buf, size);
@@ -147,26 +157,40 @@ static void amf3_freeChunk(amf3_chunk_t *chunk, char *buf) {
 }
 
 static int amf3_getStrIdx(amf3_env_t *env, char *str, int len) {
-	if (len <= 0) return -1; // empty string is never sent by reference
-	if (len > AMF3_MAX_INT) len = AMF3_MAX_INT;
+	if (len <= 0) {
+        return -1; // empty string is never sent by reference
+    }
+	if (len > AMF3_MAX_INT) {
+        len = AMF3_MAX_INT;
+    }
 	int *oldIdx;
-	if (zend_hash_find(&env->strs, (char *)str, len, (void **)&oldIdx) == SUCCESS) return *oldIdx;
+	if (zend_hash_find(&env->strs, (char *)str, len, (void **)&oldIdx) == SUCCESS) {
+        return *oldIdx;
+    }
 	int newIdx = zend_hash_num_elements(&env->strs);
-	if (newIdx <= AMF3_MAX_INT) zend_hash_add(&env->strs, (char *)str, len, &newIdx, sizeof(newIdx), NULL);
+	if (newIdx <= AMF3_MAX_INT) {
+        zend_hash_add(&env->strs, (char *)str, len, &newIdx, sizeof(newIdx), NULL);
+    }
 	return -1;
 }
 
 static int amf3_getObjIdx(amf3_env_t *env, zval *val) {
 	int *oldIdx;
-	if (Z_ISREF_P(val) && (zend_hash_find(&env->objs, (char *)&val, sizeof(val), (void **)&oldIdx) == SUCCESS)) return *oldIdx;
+	if (Z_ISREF_P(val) && (zend_hash_find(&env->objs, (char *)&val, sizeof(val), (void **)&oldIdx) == SUCCESS)) {
+        return *oldIdx;
+    }
 	int newIdx = zend_hash_num_elements(&env->objs);
-	if (newIdx <= AMF3_MAX_INT) zend_hash_add(&env->objs, (char *)&val, sizeof(val), &newIdx, sizeof(newIdx), NULL);
+	if (newIdx <= AMF3_MAX_INT) {
+        zend_hash_add(&env->objs, (char *)&val, sizeof(val), &newIdx, sizeof(newIdx), NULL);
+    }
 	return -1;
 }
 
 static zval *amf3_getRef(HashTable *ht, int idx) {
 	zval **val;
-	if (zend_hash_index_find(ht, idx, (void **)&val) == FAILURE) return NULL;
+	if (zend_hash_index_find(ht, idx, (void **)&val) == FAILURE) {
+        return NULL;
+    }
 	Z_ADDREF_PP(val);
 	return *val;
 }
@@ -221,7 +245,9 @@ static int amf3_encodeU29(amf3_chunk_t **chunk, int val) {
 static int amf3_decodeU29(int *val, char *buf, int size) {
 	int pos = 0, res = 0, tmp;
 	do {
-		if (pos >= size) return -1;
+		if (pos >= size) {
+            return -1;
+        }
 		tmp = buf[pos];
 		if (pos == 3) {
 			res <<= 8;
@@ -252,7 +278,9 @@ static int amf3_encodeDouble(amf3_chunk_t **chunk, double val) {
 }
 
 static int amf3_decodeDouble(double *val, char *buf, int size) {
-	if (size < 8) return -1;
+	if (size < 8) {
+        return -1;
+    }
 	int64_t l = 0;
 	int i;
 	for (i = 0; i < 8; ++i) {
@@ -269,9 +297,12 @@ static int amf3_decodeDouble(double *val, char *buf, int size) {
 
 static int amf3_encodeStr(amf3_chunk_t **chunk, char *str, int len, amf3_env_t *env TSRMLS_DC) {
 	int pos = 0, idx = amf3_getStrIdx(env, str, len);
-	if (idx >= 0) pos += amf3_encodeU29(chunk, idx << 1); // encode as a reference
-	else {
-		if (len > AMF3_MAX_INT) len = AMF3_MAX_INT;
+	if (idx >= 0) {
+        pos += amf3_encodeU29(chunk, idx << 1); // encode as a reference
+    } else {
+		if (len > AMF3_MAX_INT) {
+            len = AMF3_MAX_INT;
+        }
 		pos += amf3_encodeU29(chunk, (len << 1) | 1) + len;
 		*chunk = amf3_appendChunk(*chunk, str, len);
 	}
@@ -280,15 +311,21 @@ static int amf3_encodeStr(amf3_chunk_t **chunk, char *str, int len, amf3_env_t *
 
 static int amf3_decodeStr(char **str, int *len, char *buf, int size, amf3_env_t *env TSRMLS_DC) {
 	int pfx, pos = amf3_decodeU29(&pfx, buf, size);
-	if (pos < 0) return -1;
+	if (pos < 0) {
+        return -1;
+    }
 	if (!(pfx & 1)) { // decode as a reference
 		zval **val;
-		if (zend_hash_index_find(&env->strs, pfx >> 1, (void **)&val) == FAILURE) return -1;
+		if (zend_hash_index_find(&env->strs, pfx >> 1, (void **)&val) == FAILURE) {
+            return -1;
+        }
 		*str = Z_STRVAL_PP(val);
 		*len = Z_STRLEN_PP(val);
 	} else {
 		pfx >>= 1;
-		if ((pfx < 0) || ((pos + pfx) > size)) return -1;
+		if ((pfx < 0) || ((pos + pfx) > size)) {
+            return -1;
+        }
 		*str = buf + pos;
 		*len = pfx;
 		if (pfx > 0) { // empty string is never sent by reference
@@ -334,8 +371,9 @@ static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRML
 		case IS_ARRAY: {
 			pos += amf3_encodeChar(chunk, AMF3_ARRAY);
 			int idx = amf3_getObjIdx(env, val);
-			if (idx >= 0) pos += amf3_encodeU29(chunk, idx << 1); // encode as a reference
-			else {
+			if (idx >= 0) {
+                pos += amf3_encodeU29(chunk, idx << 1); // encode as a reference
+			} else {
 				HashTable *ht = Z_ARRVAL_P(val);
 				HashPosition hp;
 				zval **hv;
@@ -345,11 +383,15 @@ static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRML
 				ulong idx, num = 0;
 				for (zend_hash_internal_pointer_reset_ex(ht, &hp);; zend_hash_move_forward_ex(ht, &hp)) {
 					keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
-					if ((keyType != HASH_KEY_IS_LONG) || (idx != num)) break;
+					if ((keyType != HASH_KEY_IS_LONG) || (idx != num)) {
+                        break;
+                    }
 					++num;
 				}
 				if (num == zend_hash_num_elements(ht)) { // sequence of values with integer indexes starting from zero
-					if (num > AMF3_MAX_INT) num = AMF3_MAX_INT;
+					if (num > AMF3_MAX_INT) {
+                        num = AMF3_MAX_INT;
+                    }
 					pos += amf3_encodeU29(chunk, (num << 1) | 1); // dense part size
 					pos += amf3_encodeChar(chunk, 0x01); // end of associative part
 					for (zend_hash_internal_pointer_reset_ex(ht, &hp); (num-- > 0) && (zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS); zend_hash_move_forward_ex(ht, &hp)) {
@@ -360,12 +402,16 @@ static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRML
 					for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
 						keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
 						if (keyType == HASH_KEY_IS_STRING) {
-							if (keyLen <= 1) continue; // empty keys can't be represented in AMF3
+							if (keyLen <= 1) {
+                                continue; // empty keys can't be represented in AMF3
+                            }
 							pos += amf3_encodeStr(chunk, key, keyLen - 1, env TSRMLS_CC);
 						} else if (keyType == HASH_KEY_IS_LONG) {
 							keyLen = sprintf(keyBuf, "%ld", idx);
 							pos += amf3_encodeStr(chunk, keyBuf, keyLen, env TSRMLS_CC);
-						} else continue;
+						} else {
+                            continue;
+                        }
 						pos += amf3_encodeVal(chunk, *hv, env TSRMLS_CC);
 					}
 					pos += amf3_encodeChar(chunk, 0x01); // end of associative part
@@ -414,7 +460,9 @@ static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t 
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't decode integer at position %d", pos);
 				return -1;
 			}
-			if (i & 0x10000000) i |= ~0x1fffffff; // prolong sign bits if negative
+			if (i & 0x10000000) {
+                i |= ~0x1fffffff; // prolong sign bits if negative
+            }
 			amf3_initVal(val);
 			ZVAL_LONG(*val, i);
 			pos += res;
@@ -454,7 +502,9 @@ static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t 
 				amf3_initVal(val);
 				ZVAL_STRINGL(*val, data + pos, pfx, 1);
 				pos += pfx;
-				if (pfx > 0) amf3_putRef(&env->strs, *val); // empty string is never sent by reference
+				if (pfx > 0) {
+                    amf3_putRef(&env->strs, *val); // empty string is never sent by reference
+                }
 			}
 			break;
 		}
@@ -519,7 +569,9 @@ static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t 
 						return -1;
 					}
 					pos += res;
-					if (!keyLen) break;
+					if (!keyLen) {
+                        break;
+                    }
 					hv = 0;
 					res = amf3_decodeVal(&hv, data, pos, size, env TSRMLS_CC);
 					if (hv) { // need a trailing \0 in the key buffer to do a proper call to 'add_assoc_zval_ex'
@@ -535,14 +587,20 @@ static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t 
 							efree(tmpBuf);
 						}
 					}
-					if (res < 0) return -1; // nested error
+					if (res < 0) {
+                        return -1; // nested error
+                    }
 					pos += res;
 				}
 				while (pfx-- > 0) {
 					hv = 0;
 					res = amf3_decodeVal(&hv, data, pos, size, env TSRMLS_CC);
-					if (hv) add_next_index_zval(*val, hv);
-					if (res < 0) return -1; // nested error
+					if (hv) {
+                        add_next_index_zval(*val, hv);
+                    }
+					if (res < 0) {
+                        return -1; // nested error
+                    }
 					pos += res;
 				}
 			}
@@ -572,7 +630,9 @@ static void amf3_destroyEnv(amf3_env_t *env) {
 
 PHP_FUNCTION(amf3_encode) { // string amf3_encode(mixed value)
 	zval *val;
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &val) == FAILURE) RETURN_FALSE;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &val) == FAILURE) {
+        RETURN_FALSE;
+    }
 	amf3_chunk_t *begin = amf3_initChunk(NULL);
 	amf3_chunk_t *current = begin;
 	amf3_env_t env;
@@ -589,7 +649,9 @@ PHP_FUNCTION(amf3_decode) { // mixed amf3_decode(string data [, int &count])
 	char *data;
 	int size;
 	zval *count = 0;
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|z", &data, &size, &count) == FAILURE) RETURN_FALSE;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|z", &data, &size, &count) == FAILURE) {
+        RETURN_FALSE;
+    }
 	amf3_env_t env;
 	amf3_initEnv(&env, 1);
 	int res = amf3_decodeVal(&return_value, data, 0, size, &env TSRMLS_CC);
