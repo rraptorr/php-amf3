@@ -28,7 +28,7 @@
 static zend_function_entry amf3_functions[] = {
 	PHP_FE(amf3_encode, NULL)
 	PHP_FE(amf3_decode, NULL)
-	{ NULL, NULL, NULL }
+	PHP_FE_END
 };
 
 zend_module_entry amf3_module_entry = {
