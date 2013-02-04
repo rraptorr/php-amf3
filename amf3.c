@@ -295,7 +295,7 @@ static int amf3_decodeDouble(double *val, char *buf, int size) {
 	return 8;
 }
 
-static int amf3_encodeStr(amf3_chunk_t **chunk, char *str, int len, amf3_env_t *env TSRMLS_DC) {
+static int amf3_encodeStr(amf3_chunk_t **chunk, char *str, int len, amf3_env_t *env) {
 	int pos = 0, idx = amf3_getStrIdx(env, str, len);
 	if (idx >= 0) {
         pos += amf3_encodeU29(chunk, idx << 1); // encode as a reference
@@ -309,7 +309,7 @@ static int amf3_encodeStr(amf3_chunk_t **chunk, char *str, int len, amf3_env_t *
 	return pos;
 }
 
-static int amf3_decodeStr(char **str, int *len, char *buf, int size, amf3_env_t *env TSRMLS_DC) {
+static int amf3_decodeStr(char **str, int *len, char *buf, int size, amf3_env_t *env) {
 	int pfx, pos = amf3_decodeU29(&pfx, buf, size);
 	if (pos < 0) {
         return -1;
@@ -339,7 +339,7 @@ static int amf3_decodeStr(char **str, int *len, char *buf, int size, amf3_env_t 
 	return pos;
 }
 
-static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRMLS_DC) {
+static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env) {
 	int pos = 0;
 	switch (Z_TYPE_P(val)) {
 		default:
@@ -366,7 +366,7 @@ static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRML
 			break;
 		case IS_STRING:
 			pos += amf3_encodeChar(chunk, AMF3_STRING);
-			pos += amf3_encodeStr(chunk, Z_STRVAL_P(val), Z_STRLEN_P(val), env TSRMLS_CC);
+			pos += amf3_encodeStr(chunk, Z_STRVAL_P(val), Z_STRLEN_P(val), env);
 			break;
 		case IS_ARRAY: {
 			pos += amf3_encodeChar(chunk, AMF3_ARRAY);
@@ -395,7 +395,7 @@ static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRML
 					pos += amf3_encodeU29(chunk, (num << 1) | 1); // dense part size
 					pos += amf3_encodeChar(chunk, 0x01); // end of associative part
 					for (zend_hash_internal_pointer_reset_ex(ht, &hp); (num-- > 0) && (zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS); zend_hash_move_forward_ex(ht, &hp)) {
-						pos += amf3_encodeVal(chunk, *hv, env TSRMLS_CC);
+						pos += amf3_encodeVal(chunk, *hv, env);
 					}
 				} else { // associative array with mixed keys
 					pos += amf3_encodeChar(chunk, 0x01); // empty dense part
@@ -405,14 +405,14 @@ static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRML
 							if (keyLen <= 1) {
                                 continue; // empty keys can't be represented in AMF3
                             }
-							pos += amf3_encodeStr(chunk, key, keyLen - 1, env TSRMLS_CC);
+							pos += amf3_encodeStr(chunk, key, keyLen - 1, env);
 						} else if (keyType == HASH_KEY_IS_LONG) {
 							keyLen = sprintf(keyBuf, "%ld", idx);
-							pos += amf3_encodeStr(chunk, keyBuf, keyLen, env TSRMLS_CC);
+							pos += amf3_encodeStr(chunk, keyBuf, keyLen, env);
 						} else {
                             continue;
                         }
-						pos += amf3_encodeVal(chunk, *hv, env TSRMLS_CC);
+						pos += amf3_encodeVal(chunk, *hv, env);
 					}
 					pos += amf3_encodeChar(chunk, 0x01); // end of associative part
 				}
@@ -563,7 +563,7 @@ static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t 
 				int keyLen;
 				zval *hv;
 				for ( ;; ) { // associative array portion
-					res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env TSRMLS_CC);
+					res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env);
 					if (res < 0) {
 						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't decode array key at position %d", pos);
 						return -1;
@@ -637,7 +637,7 @@ PHP_FUNCTION(amf3_encode) { // string amf3_encode(mixed value)
 	amf3_chunk_t *current = begin;
 	amf3_env_t env;
 	amf3_initEnv(&env, 0);
-	int size = amf3_encodeVal(&current, val, &env TSRMLS_CC);
+	int size = amf3_encodeVal(&current, val, &env);
 	amf3_destroyEnv(&env);
 	char *buf = emalloc(size + 1);
 	amf3_freeChunk(begin, buf);
