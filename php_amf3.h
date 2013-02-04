@@ -27,7 +27,7 @@
 PHP_FUNCTION(amf3_encode);
 PHP_FUNCTION(amf3_decode);
 
-extern zend_module_entry hello_module_entry;
-#define phpext_hello_ptr &hello_module_entry
+extern zend_module_entry amf3_module_entry;
+#define phpext_amf3_ptr &amf3_module_entry
 
 #endif
