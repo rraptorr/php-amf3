@@ -639,8 +639,9 @@ PHP_FUNCTION(amf3_encode) { // string amf3_encode(mixed value)
 	amf3_initEnv(&env, 0);
 	int size = amf3_encodeVal(&current, val, &env);
 	amf3_destroyEnv(&env);
-	char *buf = emalloc(size);
+	char *buf = emalloc(size + 1);
 	amf3_freeChunk(begin, buf);
+	buf[size] = 0;
 	RETURN_STRINGL(buf, size, 0);
 }
 
