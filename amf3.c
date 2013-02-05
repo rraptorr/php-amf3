@@ -264,9 +264,9 @@ static int amf3_decodeU29(int *val, char *buf, int size) {
 static int amf3_encodeDouble(amf3_chunk_t **chunk, double val) {
 	union {
 		double d;
-		int64_t l;
+		zend_ulong64 l;
 	} u = { val };
-	int64_t l = u.l;
+	zend_ulong64 l = u.l;
 	char buf[8];
 	int i;
 	for (i = 0; i < 8; ++i) {
@@ -281,14 +281,14 @@ static int amf3_decodeDouble(double *val, char *buf, int size) {
 	if (size < 8) {
 		return -1;
 	}
-	int64_t l = 0;
+	zend_ulong64 l = 0;
 	int i;
 	for (i = 0; i < 8; ++i) {
 		l <<= 8;
 		l |= buf[i] & 0xff;
 	}
 	union {
-		int64_t l;
+		zend_ulong64 l;
 		double d;
 	} u = { l };
 	*val = u.d;
