@@ -53,6 +53,7 @@ ZEND_GET_MODULE(amf3)
 
 #define AMF3_MAX_INT     268435455 //  (2^28)-1
 #define AMF3_MIN_INT    -268435456 // -(2^28)
+#define AMF3_TRAITS_TYPED 0x03 // 0011
 #define AMF3_TRAITS_DYNAMIC 0x0b // 1011
 
 typedef enum amf3_type_e amf3_type_t;
@@ -70,7 +71,7 @@ enum amf3_type_e {
 	AMF3_XMLDOC       = 0x07, // no support
 	AMF3_DATE         = 0x08, // [TODO]
 	AMF3_ARRAY        = 0x09,
-	AMF3_OBJECT       = 0x0a, // no support
+	AMF3_OBJECT       = 0x0a,
 	AMF3_XML          = 0x0b, // no support
 	AMF3_BYTEARRAY    = 0x0c, // [TODO]
 };
@@ -84,6 +85,7 @@ struct amf3_chunk_s {
 struct amf3_env_s {
 	HashTable    strs;
 	HashTable    objs;
+	HashTable    traits;
 };
 
 
@@ -101,7 +103,7 @@ static amf3_chunk_t *amf3_initChunk() {
 	return chunk;
 }
 
-static amf3_chunk_t *amf3_appendChunk(amf3_chunk_t *chunk, char *buf, int size) {
+static amf3_chunk_t *amf3_appendChunk(amf3_chunk_t *chunk, const char *buf, int size) {
 	if (!chunk) {
 		return NULL;
 	}
@@ -135,7 +137,7 @@ static void amf3_freeChunk(amf3_chunk_t *chunk, char *buf) {
 	}
 }
 
-static int amf3_getStrIdx(amf3_env_t *env, char *str, int len) {
+static int amf3_getStrIdx(amf3_env_t *env, const char *str, int len) {
 	if (len <= 0) {
 		return -1; // empty string is never sent by reference
 	}
@@ -161,6 +163,24 @@ static int amf3_getObjIdx(amf3_env_t *env, zval *val) {
 	int newIdx = zend_hash_num_elements(&env->objs);
 	if (newIdx <= AMF3_MAX_INT) {
 		zend_hash_add(&env->objs, (char *)&val, sizeof(val), &newIdx, sizeof(newIdx), NULL);
+	}
+	return -1;
+}
+
+static int amf3_getTraitsIdx(amf3_env_t *env, const char *className, int len) {
+	if (len <= 0) {
+		return -1;
+	}
+	if (len > AMF3_MAX_INT) {
+		len = AMF3_MAX_INT;
+	}
+	int *oldIdx;
+	if (zend_hash_find(&env->traits, (char *)className, len, (void **)&oldIdx) == SUCCESS) {
+		return *oldIdx;
+	}
+	int newIdx = zend_hash_num_elements(&env->traits);
+	if (newIdx <= AMF3_MAX_INT) {
+		zend_hash_add(&env->traits, (char *)className, len, &newIdx, sizeof(newIdx), NULL);
 	}
 	return -1;
 }
@@ -274,7 +294,7 @@ static int amf3_decodeDouble(double *val, char *buf, int size) {
 	return 8;
 }
 
-static int amf3_encodeStr(amf3_chunk_t **chunk, char *str, int len, amf3_env_t *env) {
+static int amf3_encodeStr(amf3_chunk_t **chunk, const char *str, int len, amf3_env_t *env) {
 	int pos = 0, idx = amf3_getStrIdx(env, str, len);
 	if (idx >= 0) {
 		pos += amf3_encodeU29(chunk, idx << 1); // encode as a reference
@@ -404,6 +424,7 @@ static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, TSRM
 			if (idx >= 0) {
 				pos += amf3_encodeU29(chunk, idx << 1); // encode as a reference
 			} else {
+				const char *className = Z_OBJ_CLASS_NAME_P(val);
 				HashTable *ht = Z_OBJPROP_P(val);
 				HashPosition hp;
 				zval **hv;
@@ -412,27 +433,89 @@ static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, TSRM
 				uint keyLen;
 				ulong idx;
 
-				pos += amf3_encodeU29(chunk, AMF3_TRAITS_DYNAMIC);
-				pos += amf3_encodeChar(chunk, 0x01); // empty class name, anonymous class
+				if (!strcmp(className, "stdClass")) {
+					pos += amf3_encodeU29(chunk, AMF3_TRAITS_DYNAMIC);
+					pos += amf3_encodeChar(chunk, 0x01); // empty class name, anonymous class
 
-				for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
-					keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
-					if (keyType == HASH_KEY_IS_STRING) {
-						if (keyLen <= 1) {
-							continue; // empty keys can't be represented in AMF3
+					for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
+						keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
+						if (keyType == HASH_KEY_IS_STRING) {
+							if (keyLen <= 1) {
+								continue; // empty keys can't be represented in AMF3
+							}
+							if (key[0] == 0) {
+								continue; // skip private and protected properties
+							}
+							if (key[0] == '_') {
+								continue; // skip members with names starting with '_', same as in Zend
+							}
+							pos += amf3_encodeStr(chunk, key, keyLen - 1, env);
+							pos += amf3_encodeVal(chunk, *hv, env, TSRMLS_C);
 						}
-						if(key[0] == 0) {
-							continue; // skip private and protected properties
+					}
+
+					pos += amf3_encodeChar(chunk, 0x01); // end of dynamic members
+				} else {
+					int traitsIdx = amf3_getTraitsIdx(env, className, strlen(className));
+					if (traitsIdx >= 0) {
+						pos += amf3_encodeU29(chunk, traitsIdx << 2); // encode as a reference
+					} else {
+						// count number of properties
+						int members = 0;
+						for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
+							keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
+							if (keyType == HASH_KEY_IS_STRING) {
+								if (keyLen <= 1) {
+									continue; // empty keys can't be represented in AMF3
+								}
+								if (key[0] == 0) {
+									continue; // skip private and protected properties
+								}
+								if (key[0] == '_') {
+									continue; // skip members with names starting with '_', same as in Zend
+								}
+								members++;
+							}
 						}
-						if(key[0] == '_') {
-							continue; // skip members with names starting with '_', same as in Zend
+
+						pos += amf3_encodeU29(chunk, (members << 4) | AMF3_TRAITS_TYPED);
+						pos += amf3_encodeStr(chunk, className, strlen(className), env);
+
+						// write property names
+						for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
+							keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
+							if (keyType == HASH_KEY_IS_STRING) {
+								if (keyLen <= 1) {
+									continue; // empty keys can't be represented in AMF3
+								}
+								if (key[0] == 0) {
+									continue; // skip private and protected properties
+								}
+								if (key[0] == '_') {
+									continue; // skip members with names starting with '_', same as in Zend
+								}
+								pos += amf3_encodeStr(chunk, key, keyLen - 1, env);
+							}
 						}
-						pos += amf3_encodeStr(chunk, key, keyLen - 1, env);
-						pos += amf3_encodeVal(chunk, *hv, env, TSRMLS_C);
+					}
+
+					// write property values
+					for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
+						keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
+						if (keyType == HASH_KEY_IS_STRING) {
+							if (keyLen <= 1) {
+								continue; // empty keys can't be represented in AMF3
+							}
+							if (key[0] == 0) {
+								continue; // skip private and protected properties
+							}
+							if (key[0] == '_') {
+								continue; // skip members with names starting with '_', same as in Zend
+							}
+							pos += amf3_encodeVal(chunk, *hv, env, TSRMLS_C);
+						}
 					}
 				}
-
-				pos += amf3_encodeChar(chunk, 0x01); // end of dynamic members
 			}
 			break;
 		}
@@ -706,11 +789,13 @@ static void amf3_initEnv(amf3_env_t *env, int dtor) {
 	memset(env, 0, sizeof(*env));
 	zend_hash_init(&env->strs, 10, NULL, dtor ? ZVAL_PTR_DTOR : NULL, 0);
 	zend_hash_init(&env->objs, 10, NULL, dtor ? ZVAL_PTR_DTOR : NULL, 0);
+	zend_hash_init(&env->traits, 10, NULL, dtor ? ZVAL_PTR_DTOR : NULL, 0);
 }
 
 static void amf3_destroyEnv(amf3_env_t *env) {
 	zend_hash_destroy(&env->strs);
 	zend_hash_destroy(&env->objs);
+	zend_hash_destroy(&env->traits);
 }
 
 
