@@ -70,11 +70,17 @@ ZEND_GET_MODULE(amf3)
 #ifndef Z_ADDREF_PP
 #define Z_ADDREF_PP(A) Z_ADDREF_P(*(A))
 #endif
+#ifndef Z_DELREF_P
+#define Z_DELREF_P(A) ZVAL_DELREF(A)
+#endif
+#ifndef Z_DELREF_PP
+#define Z_DELREF_PP(A) Z_DELREF_P(*(A))
+#endif
 
 
 #define AMF3_MAX_INT     268435455 //  (2^28)-1
 #define AMF3_MIN_INT    -268435456 // -(2^28)
-
+#define AMF3_TRAITS_DYNAMIC 0x0b // 1011
 
 typedef enum amf3_type_e amf3_type_t;
 typedef struct amf3_chunk_s amf3_chunk_t;
@@ -301,8 +307,8 @@ static int amf3_encodeStr(amf3_chunk_t **chunk, char *str, int len, amf3_env_t *
 		pos += amf3_encodeU29(chunk, idx << 1); // encode as a reference
 	} else {
 		if (len > AMF3_MAX_INT) {
-		len = AMF3_MAX_INT;
-	}
+			len = AMF3_MAX_INT;
+		}
 		pos += amf3_encodeU29(chunk, (len << 1) | 1) + len;
 		*chunk = amf3_appendChunk(*chunk, str, len);
 	}
@@ -339,7 +345,7 @@ static int amf3_decodeStr(char **str, int *len, char *buf, int size, amf3_env_t 
 	return pos;
 }
 
-static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env) {
+static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, TSRMLS_D) {
 	int pos = 0;
 	switch (Z_TYPE_P(val)) {
 		default:
@@ -395,7 +401,7 @@ static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env) {
 					pos += amf3_encodeU29(chunk, (num << 1) | 1); // dense part size
 					pos += amf3_encodeChar(chunk, 0x01); // end of associative part
 					for (zend_hash_internal_pointer_reset_ex(ht, &hp); (num-- > 0) && (zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS); zend_hash_move_forward_ex(ht, &hp)) {
-						pos += amf3_encodeVal(chunk, *hv, env);
+						pos += amf3_encodeVal(chunk, *hv, env, TSRMLS_C);
 					}
 				} else { // associative array with mixed keys
 					pos += amf3_encodeChar(chunk, 0x01); // empty dense part
@@ -412,10 +418,45 @@ static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env) {
 						} else {
 							continue;
 						}
-						pos += amf3_encodeVal(chunk, *hv, env);
+						pos += amf3_encodeVal(chunk, *hv, env, TSRMLS_C);
 					}
 					pos += amf3_encodeChar(chunk, 0x01); // end of associative part
 				}
+			}
+			break;
+		}
+		case IS_OBJECT: {
+			pos += amf3_encodeChar(chunk, AMF3_OBJECT);
+			int idx = amf3_getObjIdx(env, val);
+			if (idx >= 0) {
+				pos += amf3_encodeU29(chunk, idx << 1); // encode as a reference
+			} else {
+				HashTable *ht = Z_OBJPROP_P(val);
+				HashPosition hp;
+				zval **hv;
+				char *key;
+				int keyType;
+				uint keyLen;
+				ulong idx;
+
+				pos += amf3_encodeU29(chunk, AMF3_TRAITS_DYNAMIC);
+				pos += amf3_encodeChar(chunk, 0x01); // empty class name, anonymous class
+
+				for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
+					keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
+					if (keyType == HASH_KEY_IS_STRING) {
+						if (keyLen <= 1) {
+							continue; // empty keys can't be represented in AMF3
+						}
+						if(key[0] == 0) {
+							continue; // skip private and protected properties
+						}
+						pos += amf3_encodeStr(chunk, key, keyLen - 1, env);
+						pos += amf3_encodeVal(chunk, *hv, env, TSRMLS_C);
+					}
+				}
+
+				pos += amf3_encodeChar(chunk, 0x01); // end of dynamic members
 			}
 			break;
 		}
@@ -606,6 +647,78 @@ static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t 
 			}
 			break;
 		}
+		case AMF3_OBJECT: {
+			int pfx, res = amf3_decodeU29(&pfx, data + pos, size - pos);
+			if (res < 0) {
+				php_error_docref(NULL, TSRMLS_C, E_WARNING, "Can't decode object prefix at position %d", pos);
+				return -1;
+			}
+			pos += res;
+			if (!(pfx & 1)) { // decode as a reference
+				*val = amf3_getRef(&env->objs, pfx >> 1);
+				if (!*val) {
+					php_error_docref(NULL, TSRMLS_C, E_WARNING, "Missing object reference index at position %d", pos - res);
+					return -1;
+				}
+				Z_SET_ISREF_PP(val);
+			} else {
+				if (pfx != AMF3_TRAITS_DYNAMIC) {
+					php_error_docref(NULL, TSRMLS_C, E_WARNING, "Unsupported object traits %d", pos - res);
+					return -1;
+				}
+				amf3_initVal(val);
+				object_init(*val);
+				amf3_putRef(&env->objs, *val);
+
+				char *key, keyBuf[64];
+				int keyLen;
+				zval *hv;
+				res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env); // class name
+				if (res < 0) {
+					php_error_docref(NULL, TSRMLS_C, E_WARNING, "Can't decode class name at position %d", pos);
+					return -1;
+				}
+				if (keyLen) {
+					php_error_docref(NULL, TSRMLS_C, E_WARNING, "Unsupported class name at position %d", pos);
+					return -1;
+				}
+				pos += res;
+
+				for ( ;; ) { // dynamic members
+					res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env);
+					if (res < 0) {
+						php_error_docref(NULL, TSRMLS_C, E_WARNING, "Can't decode dynamic member name at position %d", pos);
+						return -1;
+					}
+					pos += res;
+					if (!keyLen) {
+						break;
+					}
+
+					hv = 0;
+					res = amf3_decodeVal(&hv, data, pos, size, env, TSRMLS_C);
+					if (hv) { // need a trailing \0 in the key buffer to do a proper call to 'add_property_zval_ex'
+						if (keyLen < sizeof(keyBuf)) {
+							memcpy(keyBuf, key, keyLen);
+							keyBuf[keyLen] = 0;
+							add_property_zval_ex(*val, keyBuf, keyLen + 1, hv, TSRMLS_C);
+						} else {
+							char *tmpBuf = emalloc(keyLen + 1);
+							memcpy(tmpBuf, key, keyLen);
+							tmpBuf[keyLen] = 0;
+							add_property_zval_ex(*val, tmpBuf, keyLen + 1, hv, TSRMLS_C);
+							efree(tmpBuf);
+						}
+						Z_DELREF_P(hv);
+					}
+					if (res < 0) {
+						return -1; // nested error
+					}
+					pos += res;
+				}
+			}
+			break;
+		}
 		default:
 			php_error_docref(NULL, TSRMLS_C, E_WARNING, "Unsupported value type 0x%02X at position %d", type, pos - 1);
 			return -1;
@@ -637,7 +750,7 @@ PHP_FUNCTION(amf3_encode) { // string amf3_encode(mixed value)
 	amf3_chunk_t *current = begin;
 	amf3_env_t env;
 	amf3_initEnv(&env, 0);
-	int size = amf3_encodeVal(&current, val, &env);
+	int size = amf3_encodeVal(&current, val, &env, TSRMLS_C);
 	amf3_destroyEnv(&env);
 	char *buf = emalloc(size + 1);
 	amf3_freeChunk(begin, buf);
