@@ -25,7 +25,7 @@
 #include "php.h"
 #include "php_amf3.h"
 
-static zend_function_entry amf3_functions[] = {
+static const zend_function_entry amf3_functions[] = {
 	PHP_FE(amf3_encode, NULL)
 	PHP_FE(amf3_decode, NULL)
 	PHP_FE_END
@@ -50,33 +50,6 @@ ZEND_GET_MODULE(amf3)
 
 
 /* ============================================================================================================ */
-
-/* Some Zend Framework compatibility macros */
-#ifndef Z_ISREF_P
-#define Z_ISREF_P(A) PZVAL_IS_REF(A)
-#endif
-#ifndef Z_ISREF_PP
-#define Z_ISREF_PP(A) PZVAL_IS_REF(*(A))
-#endif
-#ifndef Z_SET_ISREF_P
-#define Z_SET_ISREF_P(A) { PZVAL_IS_REF(A) = 1; }
-#endif
-#ifndef Z_SET_ISREF_PP
-#define Z_SET_ISREF_PP(A) Z_SET_ISREF_P(*(A))
-#endif
-#ifndef Z_ADDREF_P
-#define Z_ADDREF_P(A) ZVAL_ADDREF(A)
-#endif
-#ifndef Z_ADDREF_PP
-#define Z_ADDREF_PP(A) Z_ADDREF_P(*(A))
-#endif
-#ifndef Z_DELREF_P
-#define Z_DELREF_P(A) ZVAL_DELREF(A)
-#endif
-#ifndef Z_DELREF_PP
-#define Z_DELREF_PP(A) Z_DELREF_P(*(A))
-#endif
-
 
 #define AMF3_MAX_INT     268435455 //  (2^28)-1
 #define AMF3_MIN_INT    -268435456 // -(2^28)
