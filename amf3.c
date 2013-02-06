@@ -424,6 +424,9 @@ static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, TSRM
 						if(key[0] == 0) {
 							continue; // skip private and protected properties
 						}
+						if(key[0] == '_') {
+							continue; // skip members with names starting with '_', same as in Zend
+						}
 						pos += amf3_encodeStr(chunk, key, keyLen - 1, env);
 						pos += amf3_encodeVal(chunk, *hv, env, TSRMLS_C);
 					}
