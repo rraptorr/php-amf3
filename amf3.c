@@ -841,6 +841,7 @@ PHP_FUNCTION(amf3_decode) { // mixed amf3_decode(string data [, int &count])
 		ZVAL_LONG(count, res);
 	}
 	if (res < 0 && return_value) {
+		zval_dtor(return_value);
 		RETURN_NULL();
 	}
 }
