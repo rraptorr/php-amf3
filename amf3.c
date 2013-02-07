@@ -396,7 +396,7 @@ static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, amf3_env_t *
 	const char *className = Z_OBJ_CLASS_NAME_P(val);
 	int idx = amf3_getTraitsIdx(env, className, strlen(className));
 	if (idx >= 0) {
-		pos += amf3_encodeU29(chunk, idx << 2); // encode as a reference
+		pos += amf3_encodeU29(chunk, (idx << 2) | 1); // encode as a reference
 	} else {
 		HashTable *ht = Z_OBJPROP_P(val);
 		HashPosition hp;
