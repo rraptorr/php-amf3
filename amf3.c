@@ -33,14 +33,14 @@ static const zend_function_entry amf3_functions[] = {
 
 zend_module_entry amf3_module_entry = {
 	STANDARD_MODULE_HEADER,
-	PHP_AMF3_WORLD_EXTNAME,
+	"amf3",
 	amf3_functions,
 	NULL,
 	NULL,
 	NULL,
 	NULL,
-	NULL,
-	PHP_AMF3_WORLD_VERSION,
+	PHP_MINFO(amf3),
+	PHP_AMF3_VERSION,
 	STANDARD_MODULE_PROPERTIES
 };
 
@@ -48,12 +48,19 @@ zend_module_entry amf3_module_entry = {
 ZEND_GET_MODULE(amf3)
 #endif
 
+PHP_MINFO_FUNCTION(amf3)
+{
+	php_info_print_table_start();
+	php_info_print_table_header(2, "AMF3 support", "enabled");
+	php_info_print_table_row(2, "Version", PHP_AMF3_VERSION);
+	php_info_print_table_end();
+}
 
 /* ============================================================================================================ */
 
 #define AMF3_MAX_INT     268435455 //  (2^28)-1
 #define AMF3_MIN_INT    -268435456 // -(2^28)
-#define AMF3_TRAITS_TYPED 0x03 // 0011
+#define AMF3_TRAITS_TYPED   0x03 // 0011
 #define AMF3_TRAITS_DYNAMIC 0x0b // 1011
 
 typedef enum amf3_type_e amf3_type_t;
@@ -71,7 +78,7 @@ enum amf3_type_e {
 	AMF3_XMLDOC       = 0x07, // no support
 	AMF3_DATE         = 0x08, // [TODO]
 	AMF3_ARRAY        = 0x09,
-	AMF3_OBJECT       = 0x0a,
+	AMF3_OBJECT       = 0x0a, // partial
 	AMF3_XML          = 0x0b, // no support
 	AMF3_BYTEARRAY    = 0x0c, // [TODO]
 };
@@ -168,20 +175,20 @@ static int amf3_getObjIdx(amf3_env_t *env, zval *val) {
 	return -1;
 }
 
-static int amf3_getTraitsIdx(amf3_env_t *env, const char *className, int len) {
-	if (len <= 0) {
+static int amf3_getTraitsIdx(amf3_env_t *env, const char *className, int classNameLen) {
+	if (classNameLen <= 0) {
 		return -1;
 	}
-	if (len > AMF3_MAX_INT) {
-		len = AMF3_MAX_INT;
+	if (classNameLen > AMF3_MAX_INT) {
+		classNameLen = AMF3_MAX_INT;
 	}
 	int *oldIdx;
-	if (zend_hash_find(&env->traits, (char *)className, len, (void **)&oldIdx) == SUCCESS) {
+	if (zend_hash_find(&env->traits, (char *)className, classNameLen, (void **)&oldIdx) == SUCCESS) {
 		return *oldIdx;
 	}
 	int newIdx = zend_hash_num_elements(&env->traits);
 	if (newIdx <= AMF3_MAX_INT) {
-		zend_hash_add(&env->traits, (char *)className, len, &newIdx, sizeof(newIdx), NULL);
+		zend_hash_add(&env->traits, (char *)className, classNameLen, &newIdx, sizeof(newIdx), NULL);
 	}
 	return -1;
 }
@@ -242,7 +249,7 @@ static int amf3_encodeU29(amf3_chunk_t **chunk, int val) {
 	return pos;
 }
 
-static int amf3_decodeU29(int *val, char *buf, int size) {
+static int amf3_decodeU29(int *val, const char *buf, int size) {
 	int pos = 0, res = 0, tmp;
 	do {
 		if (pos >= size) {
@@ -277,7 +284,7 @@ static int amf3_encodeDouble(amf3_chunk_t **chunk, double val) {
 	return 8;
 }
 
-static int amf3_decodeDouble(double *val, char *buf, int size) {
+static int amf3_decodeDouble(double *val, const char *buf, int size) {
 	if (size < 8) {
 		return -1;
 	}

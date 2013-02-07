@@ -19,15 +19,16 @@
  */
 
 #ifndef PHP_AMF3_H
-#define PHP_AMF3_H 1
+#define PHP_AMF3_H
 
-#define PHP_AMF3_WORLD_VERSION "1.0"
-#define PHP_AMF3_WORLD_EXTNAME "amf3"
-
-PHP_FUNCTION(amf3_encode);
-PHP_FUNCTION(amf3_decode);
+#define PHP_AMF3_VERSION "1.1.0"
 
 extern zend_module_entry amf3_module_entry;
 #define phpext_amf3_ptr &amf3_module_entry
+
+PHP_MINFO_FUNCTION(amf3);
+
+PHP_FUNCTION(amf3_encode);
+PHP_FUNCTION(amf3_decode);
 
 #endif

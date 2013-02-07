@@ -25,7 +25,7 @@ mixed amf3_decode(string data [, int &count])
 Required PHP version
 --------------------
 
-The source code was tested and built for PHP 5.2.9 and 5.3.1. Other PHP versions
+The source code was tested and built for PHP 5.3 and 5.4. Other PHP versions
 should be theoretically suitable too, but there might be a lack of some specific
 Zend API macros/functions in older versions, or the used macros/functions could
 become deprecated in new versions. Feel free to investigate that.
@@ -57,10 +57,8 @@ Usage constraints
 - In a special case, PHP integers are converted into AMF3 doubles according
   to the specification (see the link below)
 - Encoder's string reference table is maintained comparing strings by value
-- Encoder's object reference table (arrays only are supported at the moment) is
-  maintained comparing objects by explicit PHP reference (read the note below)
-- Unsupported PHP values are represented as undefined values in AMF3
-- Unsupported AMF3 values are represented as null values in PHP
+- Encoder's object reference table is maintained comparing objects by
+  explicit PHP reference (read the note below)
 
 Official Adobe AMF3 specification is available here:
 http://download.macromedia.com/pub/labs/amf/amf3_spec_121207.pdf
@@ -73,11 +71,3 @@ references were managed implicitly, there would be no control over this behavior
 NOTE: A PHP array is encoded as a sequence (dense array) when it has integer keys
 that start with zero and have no gaps. In all other cases, an array is considered
 as an associative array to avoid ambiguity.
-
-Please see a tiny usage sample with comments in example.php.
-
-
-Contact us
-----------
-You can contact us with questions, patches or bugs by sending an email to
-Arseny Vakhrushev <arseny.vakhrushev@gmail.com>
