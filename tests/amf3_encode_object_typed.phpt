@@ -3,6 +3,9 @@ AMF3 encoding - typed object
 --FILE--
 <?php
 class DTO {
+	private $private = "private value";
+	protected $protected = "protected value";
+	public $_underscore = "underscore value";
 	public $field = "value";
 	public $id = 678;
 }
