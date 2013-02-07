@@ -96,6 +96,7 @@ struct amf3_env_s {
 };
 
 static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, TSRMLS_D);
+static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t *env, TSRMLS_D);
 
 /* ============================================================================================================ */
 
@@ -540,6 +541,152 @@ static void amf3_initVal(zval **val) {
 	}
 }
 
+static int amf3_decodeArray(zval **val, char *data, int pos, int size, amf3_env_t *env, TSRMLS_D) {
+	int oldPos = pos;
+	int pfx, res = amf3_decodeU29(&pfx, data + pos, size - pos);
+	if (res < 0) {
+		php_error(E_WARNING, "Can't decode array prefix at position %d", pos);
+		return -1;
+	}
+	pos += res;
+	if (!(pfx & 1)) { // decode as a reference
+		*val = amf3_getRef(&env->objs, pfx >> 1);
+		if (!*val) {
+			php_error(E_WARNING, "Missing array reference index at position %d", pos - res);
+			return -1;
+		}
+		Z_SET_ISREF_PP(val);
+	} else {
+		pfx >>= 1;
+		if ((pfx < 0) || ((pos + pfx) > size)) {
+			php_error(E_WARNING, "Invalid dense array portion size at position %d", pos - res);
+			return -1;
+		}
+		amf3_initVal(val);
+		array_init(*val);
+		amf3_putRef(&env->objs, *val);
+		char *key, keyBuf[64];
+		int keyLen;
+		zval *hv;
+		for ( ;; ) { // associative array portion
+			res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env);
+			if (res < 0) {
+				php_error(E_WARNING, "Can't decode array key at position %d", pos);
+				return -1;
+			}
+			pos += res;
+			if (!keyLen) {
+				break;
+			}
+			hv = 0;
+			res = amf3_decodeVal(&hv, data, pos, size, env, TSRMLS_C);
+			if (hv) { // need a trailing \0 in the key buffer to do a proper call to 'add_assoc_zval_ex'
+				if (keyLen < sizeof(keyBuf)) {
+					memcpy(keyBuf, key, keyLen);
+					keyBuf[keyLen] = 0;
+					add_assoc_zval_ex(*val, keyBuf, keyLen + 1, hv);
+				} else {
+					char *tmpBuf = emalloc(keyLen + 1);
+					memcpy(tmpBuf, key, keyLen);
+					tmpBuf[keyLen] = 0;
+					add_assoc_zval_ex(*val, tmpBuf, keyLen + 1, hv);
+					efree(tmpBuf);
+				}
+			}
+			if (res < 0) {
+				return -1; // nested error
+			}
+			pos += res;
+		}
+		while (pfx-- > 0) {
+			hv = 0;
+			res = amf3_decodeVal(&hv, data, pos, size, env, TSRMLS_C);
+			if (hv) {
+				add_next_index_zval(*val, hv);
+			}
+			if (res < 0) {
+				return -1; // nested error
+			}
+			pos += res;
+		}
+	}
+	return pos - oldPos;
+}
+
+static int amf3_decodeObject(zval **val, char *data, int pos, int size, amf3_env_t *env, TSRMLS_D) {
+	int oldPos = pos;
+	int pfx, res = amf3_decodeU29(&pfx, data + pos, size - pos);
+	if (res < 0) {
+		php_error(E_WARNING, "Can't decode object prefix at position %d", pos);
+		return -1;
+	}
+	pos += res;
+	if (!(pfx & 1)) { // decode as a reference
+		*val = amf3_getRef(&env->objs, pfx >> 1);
+		if (!*val) {
+			php_error(E_WARNING, "Missing object reference index at position %d", pos - res);
+			return -1;
+		}
+		Z_SET_ISREF_PP(val);
+	} else {
+		if (pfx != AMF3_TRAITS_DYNAMIC) {
+			php_error(E_WARNING, "Unsupported object traits %d", pos - res);
+			return -1;
+		}
+		amf3_initVal(val);
+		object_init(*val);
+		amf3_putRef(&env->objs, *val);
+
+		char *key, keyBuf[64];
+		int keyLen;
+		zval *hv;
+		res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env); // class name
+		if (res < 0) {
+			php_error(E_WARNING, "Can't decode class name at position %d", pos);
+			return -1;
+		}
+		if (keyLen) {
+			php_error(E_WARNING, "Unsupported class name at position %d", pos);
+			return -1;
+		}
+		pos += res;
+
+		for ( ;; ) { // dynamic members
+			res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env);
+			if (res < 0) {
+				php_error(E_WARNING, "Can't decode dynamic member name at position %d", pos);
+				return -1;
+			}
+			pos += res;
+			if (!keyLen) {
+				break;
+			}
+
+			hv = 0;
+			res = amf3_decodeVal(&hv, data, pos, size, env, TSRMLS_C);
+			if (hv) { // need a trailing \0 in the key buffer to do a proper call to 'add_property_zval_ex'
+				if (keyLen < sizeof(keyBuf)) {
+					memcpy(keyBuf, key, keyLen);
+					keyBuf[keyLen] = 0;
+					add_property_zval_ex(*val, keyBuf, keyLen + 1, hv, TSRMLS_C);
+				} else {
+					char *tmpBuf = emalloc(keyLen + 1);
+					memcpy(tmpBuf, key, keyLen);
+					tmpBuf[keyLen] = 0;
+					add_property_zval_ex(*val, tmpBuf, keyLen + 1, hv, TSRMLS_C);
+					efree(tmpBuf);
+				}
+				Z_DELREF_P(hv);
+			}
+			if (res < 0) {
+				return -1; // nested error
+			}
+			pos += res;
+		}
+	}
+	return pos - oldPos;
+}
+
 static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t *env, TSRMLS_D) {
 	if ((pos < 0) || (pos >= size)) {
 		php_error(E_WARNING, "Can't decode type specifier at position %d", pos);
@@ -643,146 +790,20 @@ static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t 
 			}
 			break;
 		}
-		case AMF3_ARRAY: {
-			int pfx, res = amf3_decodeU29(&pfx, data + pos, size - pos);
+	    case AMF3_ARRAY: {
+			int res = amf3_decodeArray(val, data, pos, size, env, TSRMLS_C);
 			if (res < 0) {
-				php_error(E_WARNING, "Can't decode array prefix at position %d", pos);
-				return -1;
+				return -1; // nested error
 			}
 			pos += res;
-			if (!(pfx & 1)) { // decode as a reference
-				*val = amf3_getRef(&env->objs, pfx >> 1);
-				if (!*val) {
-					php_error(E_WARNING, "Missing array reference index at position %d", pos - res);
-					return -1;
-				}
-				Z_SET_ISREF_PP(val);
-			} else {
-				pfx >>= 1;
-				if ((pfx < 0) || ((pos + pfx) > size)) {
-					php_error(E_WARNING, "Invalid dense array portion size at position %d", pos - res);
-					return -1;
-				}
-				amf3_initVal(val);
-				array_init(*val);
-				amf3_putRef(&env->objs, *val);
-				char *key, keyBuf[64];
-				int keyLen;
-				zval *hv;
-				for ( ;; ) { // associative array portion
-					res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env);
-					if (res < 0) {
-						php_error(E_WARNING, "Can't decode array key at position %d", pos);
-						return -1;
-					}
-					pos += res;
-					if (!keyLen) {
-						break;
-					}
-					hv = 0;
-					res = amf3_decodeVal(&hv, data, pos, size, env, TSRMLS_C);
-					if (hv) { // need a trailing \0 in the key buffer to do a proper call to 'add_assoc_zval_ex'
-						if (keyLen < sizeof(keyBuf)) {
-							memcpy(keyBuf, key, keyLen);
-							keyBuf[keyLen] = 0;
-							add_assoc_zval_ex(*val, keyBuf, keyLen + 1, hv);
-						} else {
-							char *tmpBuf = emalloc(keyLen + 1);
-							memcpy(tmpBuf, key, keyLen);
-							tmpBuf[keyLen] = 0;
-							add_assoc_zval_ex(*val, tmpBuf, keyLen + 1, hv);
-							efree(tmpBuf);
-						}
-					}
-					if (res < 0) {
-						return -1; // nested error
-					}
-					pos += res;
-				}
-				while (pfx-- > 0) {
-					hv = 0;
-					res = amf3_decodeVal(&hv, data, pos, size, env, TSRMLS_C);
-					if (hv) {
-						add_next_index_zval(*val, hv);
-					}
-					if (res < 0) {
-						return -1; // nested error
-					}
-					pos += res;
-				}
-			}
 			break;
 		}
 		case AMF3_OBJECT: {
-			int pfx, res = amf3_decodeU29(&pfx, data + pos, size - pos);
+			int res = amf3_decodeObject(val, data, pos, size, env, TSRMLS_C);
 			if (res < 0) {
-				php_error(E_WARNING, "Can't decode object prefix at position %d", pos);
-				return -1;
+				return -1; // nested error
 			}
 			pos += res;
-			if (!(pfx & 1)) { // decode as a reference
-				*val = amf3_getRef(&env->objs, pfx >> 1);
-				if (!*val) {
-					php_error(E_WARNING, "Missing object reference index at position %d", pos - res);
-					return -1;
-				}
-				Z_SET_ISREF_PP(val);
-			} else {
-				if (pfx != AMF3_TRAITS_DYNAMIC) {
-					php_error(E_WARNING, "Unsupported object traits %d", pos - res);
-					return -1;
-				}
-				amf3_initVal(val);
-				object_init(*val);
-				amf3_putRef(&env->objs, *val);
-
-				char *key, keyBuf[64];
-				int keyLen;
-				zval *hv;
-				res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env); // class name
-				if (res < 0) {
-					php_error(E_WARNING, "Can't decode class name at position %d", pos);
-					return -1;
-				}
-				if (keyLen) {
-					php_error(E_WARNING, "Unsupported class name at position %d", pos);
-					return -1;
-				}
-				pos += res;
-
-				for ( ;; ) { // dynamic members
-					res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env);
-					if (res < 0) {
-						php_error(E_WARNING, "Can't decode dynamic member name at position %d", pos);
-						return -1;
-					}
-					pos += res;
-					if (!keyLen) {
-						break;
-					}
-
-					hv = 0;
-					res = amf3_decodeVal(&hv, data, pos, size, env, TSRMLS_C);
-					if (hv) { // need a trailing \0 in the key buffer to do a proper call to 'add_property_zval_ex'
-						if (keyLen < sizeof(keyBuf)) {
-							memcpy(keyBuf, key, keyLen);
-							keyBuf[keyLen] = 0;
-							add_property_zval_ex(*val, keyBuf, keyLen + 1, hv, TSRMLS_C);
-						} else {
-							char *tmpBuf = emalloc(keyLen + 1);
-							memcpy(tmpBuf, key, keyLen);
-							tmpBuf[keyLen] = 0;
-							add_property_zval_ex(*val, tmpBuf, keyLen + 1, hv, TSRMLS_C);
-							efree(tmpBuf);
-						}
-						Z_DELREF_P(hv);
-					}
-					if (res < 0) {
-						return -1; // nested error
-					}
-					pos += res;
-				}
-			}
 			break;
 		}
 		default:
