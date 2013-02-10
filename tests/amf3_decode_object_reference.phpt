@@ -2,7 +2,7 @@
 AMF3 decoding - object reference
 --FILE--
 <?php
-$amf3 = hex2bin("0905010a0b010b6669656c64060b76616c7565010a02");
+$amf3 = pack("H*", "0905010a0b010b6669656c64060b76616c7565010a02");
 $data = amf3_decode($amf3);
 var_dump($data);
 ?>

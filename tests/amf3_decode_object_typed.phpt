@@ -10,7 +10,7 @@ class DTO {
 	public $id;
 }
 
-$amf3 = hex2bin("0a230744544f0b6669656c64056964060b76616c7565048526");
+$amf3 = pack("H*", "0a230744544f0b6669656c64056964060b76616c7565048526");
 $data = amf3_decode($amf3);
 var_dump($data);
 ?>

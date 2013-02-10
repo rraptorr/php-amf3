@@ -2,17 +2,17 @@
 AMF3 decoding - integer
 --FILE--
 <?php
-var_dump(amf3_decode(hex2bin("0400")));
-var_dump(amf3_decode(hex2bin("0401")));
-var_dump(amf3_decode(hex2bin("047f")));
-var_dump(amf3_decode(hex2bin("048100")));
-var_dump(amf3_decode(hex2bin("04ff7f")));
-var_dump(amf3_decode(hex2bin("04818000")));
-var_dump(amf3_decode(hex2bin("04ffff7f")));
-var_dump(amf3_decode(hex2bin("0480c08000")));
-var_dump(amf3_decode(hex2bin("04bfffffff")));
-var_dump(amf3_decode(hex2bin("04ffffffff")));
-var_dump(amf3_decode(hex2bin("04c0808000")));
+var_dump(amf3_decode(pack("H*", "0400")));
+var_dump(amf3_decode(pack("H*", "0401")));
+var_dump(amf3_decode(pack("H*", "047f")));
+var_dump(amf3_decode(pack("H*", "048100")));
+var_dump(amf3_decode(pack("H*", "04ff7f")));
+var_dump(amf3_decode(pack("H*", "04818000")));
+var_dump(amf3_decode(pack("H*", "04ffff7f")));
+var_dump(amf3_decode(pack("H*", "0480c08000")));
+var_dump(amf3_decode(pack("H*", "04bfffffff")));
+var_dump(amf3_decode(pack("H*", "04ffffffff")));
+var_dump(amf3_decode(pack("H*", "04c0808000")));
 ?>
 --EXPECT--
 int(0)

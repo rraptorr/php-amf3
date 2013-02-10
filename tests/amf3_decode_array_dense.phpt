@@ -2,7 +2,7 @@
 AMF3 decoding - dense array
 --FILE--
 <?php
-$amf3 = hex2bin("090b0104010402040306076162630607717765");
+$amf3 = pack("H*", "090b0104010402040306076162630607717765");
 $data = amf3_decode($amf3);
 var_dump($data);
 ?>
