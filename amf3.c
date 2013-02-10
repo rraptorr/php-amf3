@@ -95,6 +95,16 @@ struct amf3_env_s {
 	HashTable    traits;
 };
 
+struct amf3_traits_s {
+	zend_class_entry **ce;
+	char         *className;
+	int          classNameLen;
+	int          memberCount;
+	char         **members;
+	int          *memberLengths;
+	int          dynamic;
+};
+
 static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, TSRMLS_D);
 static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t *env, TSRMLS_D);
 
@@ -414,29 +424,34 @@ static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, amf3_env_t *
 		uint keyLen;
 		ulong idx;
 
-		// count number of properties
-		int members = 0;
-		for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
-			keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
-			if (keyType == HASH_KEY_IS_STRING) {
-				if (keyLen <= 1 || key[0] == 0 || key[0] == '_') {
-					continue; // skip empty key, private/protected properties and properties starting with '_'
+		if (!strcmp(className, "stdClass")) {
+			pos += amf3_encodeU29(chunk, AMF3_TRAITS_DYNAMIC);
+			pos += amf3_encodeChar(chunk, 0x01); // empty class name
+		} else {
+			// count number of properties
+			int members = 0;
+			for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
+				keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
+				if (keyType == HASH_KEY_IS_STRING) {
+					if (keyLen <= 1 || key[0] == 0 || key[0] == '_') {
+						continue; // skip empty key, private/protected properties and properties starting with '_'
+					}
+					members++;
 				}
-				members++;
 			}
-		}
 
-		pos += amf3_encodeU29(chunk, (members << 4) | AMF3_TRAITS_TYPED);
-		pos += amf3_encodeStr(chunk, className, strlen(className), env);
+			pos += amf3_encodeU29(chunk, (members << 4) | AMF3_TRAITS_TYPED);
+			pos += amf3_encodeStr(chunk, className, strlen(className), env);
 
-		// write property names
-		for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
-			keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
-			if (keyType == HASH_KEY_IS_STRING) {
-				if (keyLen <= 1 || key[0] == 0 || key[0] == '_') {
-					continue; // skip empty key, private/protected properties and properties starting with '_'
+			// write property names
+			for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
+				keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
+				if (keyType == HASH_KEY_IS_STRING) {
+					if (keyLen <= 1 || key[0] == 0 || key[0] == '_') {
+						continue; // skip empty key, private/protected properties and properties starting with '_'
+					}
+					pos += amf3_encodeStr(chunk, key, keyLen - 1, env);
 				}
-				pos += amf3_encodeStr(chunk, key, keyLen - 1, env);
 			}
 		}
 	}
@@ -459,10 +474,8 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, T
 		uint keyLen;
 		ulong idx;
 
+		pos += amf3_encodeObjectTraits(chunk, val, env, TSRMLS_C);
 		if (!strcmp(className, "stdClass")) { // encode as dynamic anonymous object
-			pos += amf3_encodeU29(chunk, AMF3_TRAITS_DYNAMIC);
-			pos += amf3_encodeChar(chunk, 0x01); // empty class name
-
 			for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
 				keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
 				if (keyType == HASH_KEY_IS_STRING) {
@@ -476,8 +489,6 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, T
 
 			pos += amf3_encodeChar(chunk, 0x01); // end of dynamic members
 		} else { // encode as typed object
-			pos += amf3_encodeObjectTraits(chunk, val, env, TSRMLS_C);
-
 			// write property values
 			for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
 				keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
@@ -578,6 +589,7 @@ static int amf3_decodeArray(zval **val, char *data, int pos, int size, amf3_env_
 			if (!keyLen) {
 				break;
 			}
+
 			hv = 0;
 			res = amf3_decodeVal(&hv, data, pos, size, env, TSRMLS_C);
 			if (hv) { // need a trailing \0 in the key buffer to do a proper call to 'add_assoc_zval_ex'
@@ -629,59 +641,133 @@ static int amf3_decodeObject(zval **val, char *data, int pos, int size, amf3_env
 		}
 		Z_SET_ISREF_PP(val);
 	} else {
-		if (pfx != AMF3_TRAITS_DYNAMIC) {
-			php_error(E_WARNING, "Unsupported object traits %d", pos - res);
-			return -1;
-		}
-		amf3_initVal(val);
-		object_init(*val);
-		amf3_putRef(&env->objs, *val);
-
+		struct amf3_traits_s *traits;
+		int members;
 		char *key, keyBuf[64];
 		int keyLen;
-		zval *hv;
-		res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env); // class name
-		if (res < 0) {
-			php_error(E_WARNING, "Can't decode class name at position %d", pos);
-			return -1;
-		}
-		if (keyLen) {
-			php_error(E_WARNING, "Unsupported class name at position %d", pos);
-			return -1;
-		}
-		pos += res;
+		zval *prop;
 
-		for ( ;; ) { // dynamic members
-			res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env);
+		if (!(pfx & 2)) { // decode traits as a reference
+			ulong idx = pfx >> 2;
+			struct amf3_traits_s **found;
+			if (zend_hash_index_find(&env->traits, idx, (void **)&found) == FAILURE) {
+				php_error(E_WARNING, "Missing object traits reference index at position %d", pos - res);
+				return -1;
+			}
+
+			traits = *found;
+		} else {
+			if (pfx & 4) {
+				php_error(E_WARNING, "Can't decode externalizable object at position %d", pos);
+				return -1;
+			}
+
+			members = pfx >> 4;
+			if ((members < 0) || ((pos + members) > size)) {
+				php_error(E_WARNING, "Invalid number of class members at position %d", pos - res);
+				return -1;
+			}
+
+			HashPosition hp;
+			res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env); // class name
 			if (res < 0) {
-				php_error(E_WARNING, "Can't decode dynamic member name at position %d", pos);
+				php_error(E_WARNING, "Can't decode class name at position %d", pos);
+				return -1;
+			}
+			if (members > 0 && !keyLen) {
+				php_error(E_WARNING, "Empty class name at position %d", pos);
 				return -1;
 			}
 			pos += res;
-			if (!keyLen) {
-				break;
+
+			traits = emalloc(sizeof(*traits));
+			memset(traits, 0, sizeof(*traits));
+			zend_hash_index_update(&env->traits, zend_hash_num_elements(&env->traits), &traits, sizeof(traits), NULL);
+
+			if (keyLen) {
+				traits->className = estrndup(key, keyLen);
+				traits->classNameLen = keyLen + 1;
+				zend_str_tolower(traits->className, keyLen);
+				if (zend_hash_find(EG(class_table), traits->className, traits->classNameLen, (void **)&traits->ce) == FAILURE) {
+					php_error(E_WARNING, "Unable to find class at position %d", pos - res);
+					return -1;
+				}
 			}
 
-			hv = 0;
-			res = amf3_decodeVal(&hv, data, pos, size, env, TSRMLS_C);
-			if (hv) { // need a trailing \0 in the key buffer to do a proper call to 'add_property_zval_ex'
-				if (keyLen < sizeof(keyBuf)) {
-					memcpy(keyBuf, key, keyLen);
-					keyBuf[keyLen] = 0;
-					add_property_zval_ex(*val, keyBuf, keyLen + 1, hv, TSRMLS_C);
-				} else {
-					char *tmpBuf = emalloc(keyLen + 1);
-					memcpy(tmpBuf, key, keyLen);
-					tmpBuf[keyLen] = 0;
-					add_property_zval_ex(*val, tmpBuf, keyLen + 1, hv, TSRMLS_C);
-					efree(tmpBuf);
+			traits->memberCount = members;
+			if (members > 0) {
+				traits->members = emalloc(sizeof(*traits->members) * traits->memberCount);
+				traits->memberLengths = emalloc(sizeof(*traits->memberLengths) * traits->memberCount);
+				for (members = 0; members < traits->memberCount; members++) {
+					res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env); // member names
+					if (res < 0) {
+						return -1; // nested error
+					}
+					pos += res;
+
+					// TODO: check if the member exists
+					traits->members[members] = estrndup(key, keyLen);
+					traits->memberLengths[members] = keyLen + 1;
 				}
-				Z_DELREF_P(hv);
+			}
+
+			traits->dynamic = (pfx & 0x0f) == AMF3_TRAITS_DYNAMIC;
+		}
+
+		amf3_initVal(val);
+		if (traits->ce) {
+			object_init_ex(*val, *traits->ce); // TODO: call __construct
+		} else {
+			object_init(*val);
+		}
+		amf3_putRef(&env->objs, *val);
+
+		for (members = 0; members < traits->memberCount; members++) { // sealed members
+			prop = 0;
+			res = amf3_decodeVal(&prop, data, pos, size, env, TSRMLS_C);
+			if (prop) {
+				add_property_zval_ex(*val, traits->members[members], traits->memberLengths[members], prop, TSRMLS_C);
+				Z_DELREF_P(prop);
 			}
 			if (res < 0) {
 				return -1; // nested error
 			}
 			pos += res;
+		}
+
+		if (traits->dynamic) { // dynamic members
+			for ( ;; ) {
+				res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env);
+				if (res < 0) {
+					php_error(E_WARNING, "Can't decode dynamic member name at position %d", pos);
+					return -1;
+				}
+				pos += res;
+				if (!keyLen) {
+					break;
+				}
+
+				prop = 0;
+				res = amf3_decodeVal(&prop, data, pos, size, env, TSRMLS_C);
+				if (prop) { // need a trailing \0 in the key buffer to do a proper call to 'add_property_zval_ex'
+					if (keyLen < sizeof(keyBuf)) {
+						memcpy(keyBuf, key, keyLen);
+						keyBuf[keyLen] = 0;
+						add_property_zval_ex(*val, keyBuf, keyLen + 1, prop, TSRMLS_C);
+					} else {
+						char *tmpBuf = emalloc(keyLen + 1);
+						memcpy(tmpBuf, key, keyLen);
+						tmpBuf[keyLen] = 0;
+						add_property_zval_ex(*val, tmpBuf, keyLen + 1, prop, TSRMLS_C);
+						efree(tmpBuf);
+					}
+					Z_DELREF_P(prop);
+				}
+				if (res < 0) {
+					return -1; // nested error
+				}
+				pos += res;
+			}
 		}
 	}
 	return pos - oldPos;
@@ -790,7 +876,7 @@ static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t 
 			}
 			break;
 		}
-	    case AMF3_ARRAY: {
+		case AMF3_ARRAY: {
 			int res = amf3_decodeArray(val, data, pos, size, env, TSRMLS_C);
 			if (res < 0) {
 				return -1; // nested error
@@ -813,11 +899,29 @@ static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t 
 	return pos - oldPos;
 }
 
+static void traits_ptr_dtor(void *ptr) {
+	int i;
+	struct amf3_traits_s *traits = *((struct amf3_traits_s **)ptr);
+	if (traits->className) {
+		efree(traits->className);
+	}
+	if (traits->members) {
+		for (i = 0; i < traits->memberCount; i++) {
+			efree(traits->members[i]);
+		}
+		efree(traits->members);
+	}
+	if (traits->memberLengths) {
+		efree(traits->memberLengths);
+	}
+	efree(traits);
+}
+
 static void amf3_initEnv(amf3_env_t *env, int dtor) {
 	memset(env, 0, sizeof(*env));
 	zend_hash_init(&env->strs, 10, NULL, dtor ? ZVAL_PTR_DTOR : NULL, 0);
 	zend_hash_init(&env->objs, 10, NULL, dtor ? ZVAL_PTR_DTOR : NULL, 0);
-	zend_hash_init(&env->traits, 10, NULL, dtor ? ZVAL_PTR_DTOR : NULL, 0);
+	zend_hash_init(&env->traits, 10, NULL, dtor ? traits_ptr_dtor : NULL, 0);
 }
 
 static void amf3_destroyEnv(amf3_env_t *env) {
