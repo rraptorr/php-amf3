@@ -23,6 +23,7 @@
 #endif
 
 #include "php.h"
+#include "Zend/zend_interfaces.h"
 #include "php_amf3.h"
 
 static const zend_function_entry amf3_functions[] = {
@@ -78,7 +79,7 @@ enum amf3_type_e {
 	AMF3_XMLDOC       = 0x07, // no support
 	AMF3_DATE         = 0x08, // [TODO]
 	AMF3_ARRAY        = 0x09,
-	AMF3_OBJECT       = 0x0a, // partial
+	AMF3_OBJECT       = 0x0a,
 	AMF3_XML          = 0x0b, // no support
 	AMF3_BYTEARRAY    = 0x0c, // [TODO]
 };
@@ -716,7 +717,10 @@ static int amf3_decodeObject(zval **val, char *data, int pos, int size, amf3_env
 
 		amf3_initVal(val);
 		if (traits->ce) {
-			object_init_ex(*val, *traits->ce); // TODO: call __construct
+			object_init_ex(*val, *traits->ce);
+			if ((*traits->ce)->constructor) {
+				zend_call_method_with_0_params(val, *traits->ce, &(*traits->ce)->constructor, "__construct", NULL);
+			}
 		} else {
 			object_init(*val);
 		}
