@@ -105,8 +105,8 @@ struct amf3_traits_s {
 	int          dynamic;
 };
 
-static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, TSRMLS_D);
-static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t *env, TSRMLS_D);
+static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRMLS_DC);
+static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t *env TSRMLS_DC);
 
 /* ============================================================================================================ */
 
@@ -357,7 +357,7 @@ static int amf3_decodeStr(char **str, int *len, char *buf, int size, amf3_env_t 
 	return pos;
 }
 
-static int amf3_encodeArray(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, TSRMLS_D) {
+static int amf3_encodeArray(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRMLS_DC) {
 	int pos = amf3_encodeChar(chunk, AMF3_ARRAY);
 	int idx = amf3_getObjIdx(env, val);
 	if (idx >= 0) {
@@ -384,7 +384,7 @@ static int amf3_encodeArray(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, TS
 			pos += amf3_encodeU29(chunk, (num << 1) | 1); // dense part size
 			pos += amf3_encodeChar(chunk, 0x01); // end of associative part
 			for (zend_hash_internal_pointer_reset_ex(ht, &hp); (num-- > 0) && (zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS); zend_hash_move_forward_ex(ht, &hp)) {
-				pos += amf3_encodeVal(chunk, *hv, env, TSRMLS_C);
+				pos += amf3_encodeVal(chunk, *hv, env TSRMLS_CC);
 			}
 		} else { // associative array with mixed keys
 			pos += amf3_encodeChar(chunk, 0x01); // empty dense part
@@ -401,7 +401,7 @@ static int amf3_encodeArray(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, TS
 				} else {
 					continue;
 				}
-				pos += amf3_encodeVal(chunk, *hv, env, TSRMLS_C);
+				pos += amf3_encodeVal(chunk, *hv, env TSRMLS_CC);
 			}
 			pos += amf3_encodeChar(chunk, 0x01); // end of associative part
 		}
@@ -409,7 +409,7 @@ static int amf3_encodeArray(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, TS
 	return pos;
 }
 
-static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, TSRMLS_D) {
+static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRMLS_DC) {
 	int pos = 0;
 	const char *className = Z_OBJ_CLASS_NAME_P(val);
 	int idx = amf3_getTraitsIdx(env, className, strlen(className));
@@ -459,7 +459,7 @@ static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, amf3_env_t *
 	return pos;
 }
 
-static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, TSRMLS_D) {
+static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRMLS_DC) {
 	int pos = amf3_encodeChar(chunk, AMF3_OBJECT);
 	int idx = amf3_getObjIdx(env, val);
 	if (idx >= 0) {
@@ -474,7 +474,7 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, T
 		uint keyLen;
 		ulong idx;
 
-		pos += amf3_encodeObjectTraits(chunk, val, env, TSRMLS_C);
+		pos += amf3_encodeObjectTraits(chunk, val, env TSRMLS_CC);
 		if (!strcmp(className, "stdClass")) { // encode as dynamic anonymous object
 			for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
 				keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
@@ -483,7 +483,7 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, T
 						continue; // skip empty key, private/protected properties and properties starting with '_'
 					}
 					pos += amf3_encodeStr(chunk, key, keyLen - 1, env);
-					pos += amf3_encodeVal(chunk, *hv, env, TSRMLS_C);
+					pos += amf3_encodeVal(chunk, *hv, env TSRMLS_CC);
 				}
 			}
 
@@ -496,7 +496,7 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, T
 					if (keyLen <= 1 || key[0] == 0 || key[0] == '_') {
 						continue; // skip empty key, private/protected properties and properties starting with '_'
 					}
-					pos += amf3_encodeVal(chunk, *hv, env, TSRMLS_C);
+					pos += amf3_encodeVal(chunk, *hv, env TSRMLS_CC);
 				}
 			}
 		}
@@ -504,7 +504,7 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, T
 	return pos;
 }
 
-static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, TSRMLS_D) {
+static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRMLS_DC) {
 	int pos = 0;
 	switch (Z_TYPE_P(val)) {
 		case IS_NULL:
@@ -531,10 +531,10 @@ static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env, TSRM
 			pos += amf3_encodeStr(chunk, Z_STRVAL_P(val), Z_STRLEN_P(val), env);
 			break;
 		case IS_ARRAY:
-			pos += amf3_encodeArray(chunk, val, env, TSRMLS_C);
+			pos += amf3_encodeArray(chunk, val, env TSRMLS_CC);
 			break;
 		case IS_OBJECT:
-			pos += amf3_encodeObject(chunk, val, env, TSRMLS_C);
+			pos += amf3_encodeObject(chunk, val, env TSRMLS_CC);
 			break;
 		default:
 			php_error(E_WARNING, "Unable to encode unsupported value type");
@@ -552,7 +552,7 @@ static void amf3_initVal(zval **val) {
 	}
 }
 
-static int amf3_decodeArray(zval **val, char *data, int pos, int size, amf3_env_t *env, TSRMLS_D) {
+static int amf3_decodeArray(zval **val, char *data, int pos, int size, amf3_env_t *env TSRMLS_DC) {
 	int oldPos = pos;
 	int pfx, res = amf3_decodeU29(&pfx, data + pos, size - pos);
 	if (res < 0) {
@@ -591,7 +591,7 @@ static int amf3_decodeArray(zval **val, char *data, int pos, int size, amf3_env_
 			}
 
 			hv = 0;
-			res = amf3_decodeVal(&hv, data, pos, size, env, TSRMLS_C);
+			res = amf3_decodeVal(&hv, data, pos, size, env TSRMLS_CC);
 			if (hv) { // need a trailing \0 in the key buffer to do a proper call to 'add_assoc_zval_ex'
 				if (keyLen < sizeof(keyBuf)) {
 					memcpy(keyBuf, key, keyLen);
@@ -612,7 +612,7 @@ static int amf3_decodeArray(zval **val, char *data, int pos, int size, amf3_env_
 		}
 		while (pfx-- > 0) {
 			hv = 0;
-			res = amf3_decodeVal(&hv, data, pos, size, env, TSRMLS_C);
+			res = amf3_decodeVal(&hv, data, pos, size, env TSRMLS_CC);
 			if (hv) {
 				add_next_index_zval(*val, hv);
 			}
@@ -625,7 +625,7 @@ static int amf3_decodeArray(zval **val, char *data, int pos, int size, amf3_env_
 	return pos - oldPos;
 }
 
-static int amf3_decodeObject(zval **val, char *data, int pos, int size, amf3_env_t *env, TSRMLS_D) {
+static int amf3_decodeObject(zval **val, char *data, int pos, int size, amf3_env_t *env TSRMLS_DC) {
 	int oldPos = pos;
 	int pfx, res = amf3_decodeU29(&pfx, data + pos, size - pos);
 	if (res < 0) {
@@ -724,9 +724,9 @@ static int amf3_decodeObject(zval **val, char *data, int pos, int size, amf3_env
 
 		for (members = 0; members < traits->memberCount; members++) { // sealed members
 			prop = 0;
-			res = amf3_decodeVal(&prop, data, pos, size, env, TSRMLS_C);
+			res = amf3_decodeVal(&prop, data, pos, size, env TSRMLS_CC);
 			if (prop) {
-				add_property_zval_ex(*val, traits->members[members], traits->memberLengths[members], prop, TSRMLS_C);
+				add_property_zval_ex(*val, traits->members[members], traits->memberLengths[members], prop TSRMLS_CC);
 				Z_DELREF_P(prop);
 			}
 			if (res < 0) {
@@ -748,17 +748,17 @@ static int amf3_decodeObject(zval **val, char *data, int pos, int size, amf3_env
 				}
 
 				prop = 0;
-				res = amf3_decodeVal(&prop, data, pos, size, env, TSRMLS_C);
+				res = amf3_decodeVal(&prop, data, pos, size, env TSRMLS_CC);
 				if (prop) { // need a trailing \0 in the key buffer to do a proper call to 'add_property_zval_ex'
 					if (keyLen < sizeof(keyBuf)) {
 						memcpy(keyBuf, key, keyLen);
 						keyBuf[keyLen] = 0;
-						add_property_zval_ex(*val, keyBuf, keyLen + 1, prop, TSRMLS_C);
+						add_property_zval_ex(*val, keyBuf, keyLen + 1, prop TSRMLS_CC);
 					} else {
 						char *tmpBuf = emalloc(keyLen + 1);
 						memcpy(tmpBuf, key, keyLen);
 						tmpBuf[keyLen] = 0;
-						add_property_zval_ex(*val, tmpBuf, keyLen + 1, prop, TSRMLS_C);
+						add_property_zval_ex(*val, tmpBuf, keyLen + 1, prop TSRMLS_CC);
 						efree(tmpBuf);
 					}
 					Z_DELREF_P(prop);
@@ -773,7 +773,7 @@ static int amf3_decodeObject(zval **val, char *data, int pos, int size, amf3_env
 	return pos - oldPos;
 }
 
-static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t *env, TSRMLS_D) {
+static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t *env TSRMLS_DC) {
 	if ((pos < 0) || (pos >= size)) {
 		php_error(E_WARNING, "Can't decode type specifier at position %d", pos);
 		return -1;
@@ -877,7 +877,7 @@ static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t 
 			break;
 		}
 		case AMF3_ARRAY: {
-			int res = amf3_decodeArray(val, data, pos, size, env, TSRMLS_C);
+			int res = amf3_decodeArray(val, data, pos, size, env TSRMLS_CC);
 			if (res < 0) {
 				return -1; // nested error
 			}
@@ -885,7 +885,7 @@ static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t 
 			break;
 		}
 		case AMF3_OBJECT: {
-			int res = amf3_decodeObject(val, data, pos, size, env, TSRMLS_C);
+			int res = amf3_decodeObject(val, data, pos, size, env TSRMLS_CC);
 			if (res < 0) {
 				return -1; // nested error
 			}
@@ -936,14 +936,14 @@ static void amf3_destroyEnv(amf3_env_t *env) {
 
 PHP_FUNCTION(amf3_encode) { // string amf3_encode(mixed value)
 	zval *val;
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), TSRMLS_C, "z", &val) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &val) == FAILURE) {
 		RETURN_FALSE;
 	}
 	amf3_chunk_t *begin = amf3_initChunk();
 	amf3_chunk_t *current = begin;
 	amf3_env_t env;
 	amf3_initEnv(&env, 0);
-	int size = amf3_encodeVal(&current, val, &env, TSRMLS_C);
+	int size = amf3_encodeVal(&current, val, &env TSRMLS_CC);
 	amf3_destroyEnv(&env);
 	char *buf = emalloc(size + 1);
 	amf3_freeChunk(begin, buf);
@@ -955,12 +955,12 @@ PHP_FUNCTION(amf3_decode) { // mixed amf3_decode(string data [, int &count])
 	char *data;
 	int size;
 	zval *count = 0;
-	if (zend_parse_parameters(ZEND_NUM_ARGS(), TSRMLS_C, "s|z", &data, &size, &count) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|z", &data, &size, &count) == FAILURE) {
 		RETURN_FALSE;
 	}
 	amf3_env_t env;
 	amf3_initEnv(&env, 1);
-	int res = amf3_decodeVal(&return_value, data, 0, size, &env, TSRMLS_C);
+	int res = amf3_decodeVal(&return_value, data, 0, size, &env TSRMLS_CC);
 	amf3_destroyEnv(&env);
 	if (count) {
 		ZVAL_LONG(count, res);
