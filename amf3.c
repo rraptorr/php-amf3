@@ -99,8 +99,6 @@ struct amf3_env_s {
 
 struct amf3_traits_s {
 	zend_class_entry **ce;
-	char         *className;
-	int          classNameLen;
 	int          memberCount;
 	char         **members;
 	int          *memberLengths;
@@ -686,10 +684,8 @@ static int amf3_decodeObject(zval **val, char *data, int pos, int size, amf3_env
 			zend_hash_index_update(&env->traits, zend_hash_num_elements(&env->traits), &traits, sizeof(traits), NULL);
 
 			if (keyLen) {
-				traits->className = estrndup(key, keyLen);
-				traits->classNameLen = keyLen + 1;
-				zend_str_tolower(traits->className, keyLen);
-				if (zend_hash_find(EG(class_table), traits->className, traits->classNameLen, (void **)&traits->ce) == FAILURE) {
+				// do not try to autoload class, autoloading based on user supplied data is a bad idea
+				if (zend_lookup_class_ex(key, keyLen, NULL, 0, &traits->ce TSRMLS_CC) == FAILURE) {
 					php_error(E_WARNING, "Unable to find class at position %d", pos - res);
 					return -1;
 				}
@@ -907,9 +903,6 @@ static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t 
 static void traits_ptr_dtor(void *ptr) {
 	int i;
 	struct amf3_traits_s *traits = *((struct amf3_traits_s **)ptr);
-	if (traits->className) {
-		efree(traits->className);
-	}
 	if (traits->members) {
 		for (i = 0; i < traits->memberCount; i++) {
 			if (traits->members[i]) {
