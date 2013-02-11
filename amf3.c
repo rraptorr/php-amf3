@@ -681,7 +681,7 @@ static int amf3_decodeObject(zval **val, char *data, int pos, int size, amf3_env
 			}
 			pos += res;
 
-			traits = emalloc(sizeof(*traits));
+			traits = ecalloc(1, sizeof(*traits));
 			memset(traits, 0, sizeof(*traits));
 			zend_hash_index_update(&env->traits, zend_hash_num_elements(&env->traits), &traits, sizeof(traits), NULL);
 
@@ -697,8 +697,8 @@ static int amf3_decodeObject(zval **val, char *data, int pos, int size, amf3_env
 
 			traits->memberCount = members;
 			if (members > 0) {
-				traits->members = emalloc(sizeof(*traits->members) * traits->memberCount);
-				traits->memberLengths = emalloc(sizeof(*traits->memberLengths) * traits->memberCount);
+				traits->members = ecalloc(traits->memberCount, sizeof(*traits->members));
+				traits->memberLengths = ecalloc(traits->memberCount, sizeof(*traits->memberLengths));
 				for (members = 0; members < traits->memberCount; members++) {
 					res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env); // member names
 					if (res < 0) {
@@ -912,7 +912,9 @@ static void traits_ptr_dtor(void *ptr) {
 	}
 	if (traits->members) {
 		for (i = 0; i < traits->memberCount; i++) {
-			efree(traits->members[i]);
+			if (traits->members[i]) {
+				efree(traits->members[i]);
+			}
 		}
 		efree(traits->members);
 	}
