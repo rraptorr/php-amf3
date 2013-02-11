@@ -450,7 +450,7 @@ static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, amf3_env_t *
 		uint keyLen;
 		ulong idx;
 
-		if (!strcmp(className, "stdClass")) {
+		if (instanceof_function(Z_OBJCE_P(val), zend_standard_class_def TSRMLS_CC)) {
 			pos += amf3_encodeU29(chunk, AMF3_TRAITS_DYNAMIC);
 			pos += amf3_encodeChar(chunk, 0x01); // empty class name
 		} else {
@@ -498,7 +498,6 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TS
 	if (idx >= 0) {
 		pos += amf3_encodeU29(chunk, idx << 1); // encode as a reference
 	} else {
-		const char *className = Z_OBJ_CLASS_NAME_P(val);
 		HashTable *ht = Z_OBJPROP_P(val);
 		HashPosition hp;
 		zval **hv;
@@ -508,7 +507,7 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TS
 		ulong idx;
 
 		pos += amf3_encodeObjectTraits(chunk, val, env TSRMLS_CC);
-		if (!strcmp(className, "stdClass")) { // encode as dynamic anonymous object
+		if (instanceof_function(Z_OBJCE_P(val), zend_standard_class_def TSRMLS_CC)) { // encode as dynamic anonymous object
 			for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
 				keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
 				if (keyType == HASH_KEY_IS_STRING) {
