@@ -719,8 +719,14 @@ static int amf3_decodeObject(zval **val, const char *data, int pos, int size, am
 			zend_hash_index_update(&env->traits, zend_hash_num_elements(&env->traits), &traits, sizeof(traits), NULL);
 
 			if (keyLen) {
+				int ret;
 				// do not try to autoload class, autoloading based on user supplied data is a bad idea
-				if (zend_lookup_class_ex(key, keyLen, NULL, 0, &traits->ce TSRMLS_CC) == FAILURE) {
+#if PHP_MAJOR_VERSION >= 5 && PHP_MINOR_VERSION >= 4
+				ret = zend_lookup_class_ex(key, keyLen, NULL, 0, &traits->ce TSRMLS_CC);
+#else
+				ret = zend_lookup_class_ex(key, keyLen, 0, &traits->ce TSRMLS_CC);
+#endif
+				if (ret == FAILURE) {
 					php_error(E_WARNING, "Unable to find class at position %d", pos - res);
 					return -1;
 				}
