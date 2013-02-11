@@ -785,6 +785,7 @@ static int amf3_decodeVal(zval **val, char *data, int pos, int size, amf3_env_t 
 	int oldPos = pos;
 	amf3_type_t type = (unsigned char)data[pos++];
 	switch (type) {
+		case AMF3_UNDEFINED:
 		case AMF3_NULL:
 			amf3_initVal(val);
 			ZVAL_NULL(*val);
