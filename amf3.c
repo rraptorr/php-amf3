@@ -22,8 +22,9 @@
 #include "config.h"
 #endif
 
-#include "php.h"
-#include "Zend/zend_interfaces.h"
+#include <php.h>
+#include <Zend/zend_interfaces.h>
+#include <ext/standard/info.h>
 #include "php_amf3.h"
 
 static const zend_function_entry amf3_functions[] = {
@@ -669,7 +670,6 @@ static int amf3_decodeObject(zval **val, char *data, int pos, int size, amf3_env
 				return -1;
 			}
 
-			HashPosition hp;
 			res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env); // class name
 			if (res < 0) {
 				php_error(E_WARNING, "Can't decode class name at position %d", pos);
