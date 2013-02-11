@@ -25,6 +25,7 @@
 #include <php.h>
 #include <Zend/zend_interfaces.h>
 #include <ext/standard/info.h>
+#include <ext/date/php_date.h>
 #include "php_amf3.h"
 
 static const zend_function_entry amf3_functions[] = {
@@ -80,7 +81,7 @@ enum amf3_type_e {
 	AMF3_DOUBLE        = 0x05,
 	AMF3_STRING        = 0x06,
 	AMF3_XMLDOC        = 0x07, // no support
-	AMF3_DATE          = 0x08, // incomplete
+	AMF3_DATE          = 0x08,
 	AMF3_ARRAY         = 0x09,
 	AMF3_OBJECT        = 0x0a, // without externalizable
 	AMF3_XML           = 0x0b, // no support
@@ -364,6 +365,24 @@ static int amf3_decodeStr(const char **str, int *len, const char *buf, int size,
 	return pos;
 }
 
+static int amf3_encodeDate(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRMLS_DC) {
+	int pos = amf3_encodeChar(chunk, AMF3_DATE);
+	int idx = amf3_getObjIdx(env, val);
+	if (idx >= 0) {
+		pos += amf3_encodeU29(chunk, idx << 1); // encode as a reference
+	} else {
+		zval *return_value;
+
+		zend_call_method_with_0_params(&val, NULL, NULL, "getTimestamp", &return_value);
+
+		pos += amf3_encodeU29(chunk, 1);
+		pos += amf3_encodeDouble(chunk, Z_LVAL_P(return_value) * 1000);
+
+		FREE_ZVAL(return_value);
+	}
+	return pos;
+}
+
 static int amf3_encodeArray(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRMLS_DC) {
 	int pos = amf3_encodeChar(chunk, AMF3_ARRAY);
 	int idx = amf3_getObjIdx(env, val);
@@ -467,8 +486,15 @@ static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, amf3_env_t *
 }
 
 static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRMLS_DC) {
-	int pos = amf3_encodeChar(chunk, AMF3_OBJECT);
-	int idx = amf3_getObjIdx(env, val);
+	int pos = 0, idx;
+
+	if (instanceof_function(Z_OBJCE_P(val), php_date_get_date_ce() TSRMLS_CC)) {
+		pos += amf3_encodeDate(chunk, val, env TSRMLS_CC);
+		return pos;
+	}
+
+	pos = amf3_encodeChar(chunk, AMF3_OBJECT);
+	idx = amf3_getObjIdx(env, val);
 	if (idx >= 0) {
 		pos += amf3_encodeU29(chunk, idx << 1); // encode as a reference
 	} else {
@@ -874,13 +900,22 @@ static int amf3_decodeVal(zval **val, const char *data, int pos, int size, amf3_
 				Z_SET_ISREF_PP(val);
 			} else {
 				double d;
+				char buf[64];
+				int bufLen;
 				res = amf3_decodeDouble(&d, data + pos, size - pos);
-				if (res < 0) {
+				if (res < 0 || d < 0.0) {
 					php_error(E_WARNING, "Can't decode date at position %d", pos);
 					return -1;
 				}
+
 				amf3_initVal(val);
-				ZVAL_DOUBLE(*val, d);
+				bufLen = snprintf(buf, sizeof(buf), "%.0f", d/1000.0);
+				php_date_instantiate(php_date_get_date_ce(), *val TSRMLS_CC);
+				if (!php_date_initialize(zend_object_store_get_object(*val TSRMLS_CC), buf, bufLen, "U", NULL, 0 TSRMLS_CC)) {
+					php_error(E_WARNING, "Can't initialize date at position %d", pos);
+					return -1;
+				}
+
 				amf3_putRef(&env->objs, *val);
 				pos += res;
 			}
