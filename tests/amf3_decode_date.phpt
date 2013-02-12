@@ -1,8 +1,9 @@
 --TEST--
 AMF3 decoding - date
+--INI--
+date.timezone=UTC
 --FILE--
 <?php
-date_default_timezone_set('UTC');
 $amf3 = pack("H*", "09050108014273ccb84e2080000802");
 $data = amf3_decode($amf3);
 var_dump($data);

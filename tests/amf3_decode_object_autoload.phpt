@@ -1,5 +1,7 @@
 --TEST--
 AMF3 decoding - object autoloading
+--INI--
+display_errors=off
 --FILE--
 <?php
 function autoloader($class) {
@@ -16,7 +18,6 @@ function autoloader($class) {
 
 spl_autoload_register('autoloader');
 
-ini_set("display_errors", "off");
 $amf3 = pack("H*", "0a230744544f0b6669656c64056964060b76616c7565048526");
 $data = amf3_decode($amf3);
 var_dump($data);

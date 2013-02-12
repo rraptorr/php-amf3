@@ -1,8 +1,9 @@
 --TEST--
 AMF3 encoding - date
+--INI--
+date.timezone=UTC
 --FILE--
 <?php
-date_default_timezone_set('UTC');
 $date = new DateTime('2013-02-11 23:09:09');
 $data = array(&$date, &$date);
 $amf3 = amf3_encode($data);
