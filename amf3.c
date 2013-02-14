@@ -28,9 +28,18 @@
 #include <ext/date/php_date.h>
 #include "php_amf3.h"
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_amf3_encode, 0, 0, 1)
+    ZEND_ARG_INFO(0, value)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_amf3_decode, 0, 0, 1)
+    ZEND_ARG_INFO(0, data)
+    ZEND_ARG_INFO(1, count)
+ZEND_END_ARG_INFO()
+
 static const zend_function_entry amf3_functions[] = {
-	PHP_FE(amf3_encode, NULL)
-	PHP_FE(amf3_decode, NULL)
+	PHP_FE(amf3_encode, arginfo_amf3_encode)
+	PHP_FE(amf3_decode, arginfo_amf3_decode)
 	PHP_FE_END
 };
 
