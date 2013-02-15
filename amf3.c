@@ -203,20 +203,14 @@ static int amf3_getObjIdx(amf3_env_t *env, zval *val) {
 	return -1;
 }
 
-static int amf3_getTraitsIdx(amf3_env_t *env, const char *className, int classNameLen) {
-	if (classNameLen <= 0) {
-		return -1;
-	}
-	if (classNameLen > AMF3_MAX_INT) {
-		classNameLen = AMF3_MAX_INT;
-	}
+static int amf3_getTraitsIdx(amf3_env_t *env, zend_class_entry *ce) {
 	int *oldIdx;
-	if (zend_hash_find(&env->traits, className, classNameLen, (void **)&oldIdx) == SUCCESS) {
+	if (zend_hash_find(&env->traits, (char *)&ce, sizeof(ce), (void **)&oldIdx) == SUCCESS) {
 		return *oldIdx;
 	}
 	int newIdx = zend_hash_num_elements(&env->traits);
 	if (newIdx <= AMF3_MAX_INT) {
-		zend_hash_add(&env->traits, className, classNameLen, &newIdx, sizeof(newIdx), NULL);
+		zend_hash_add(&env->traits, (char *)&ce, sizeof(ce), &newIdx, sizeof(newIdx), NULL);
 	}
 	return -1;
 }
@@ -446,7 +440,7 @@ static int amf3_encodeArray(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSR
 
 static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, zend_class_entry *ce, amf3_env_t *env TSRMLS_DC) {
 	int pos = 0;
-	int idx = amf3_getTraitsIdx(env, ce->name, ce->name_length);
+	int idx = amf3_getTraitsIdx(env, ce);
 	if (idx >= 0) {
 		pos += amf3_encodeU29(chunk, (idx << 2) | 1); // encode as a reference
 	} else {
