@@ -444,27 +444,26 @@ static int amf3_encodeArray(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSR
 	return pos;
 }
 
-static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRMLS_DC) {
+static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, zend_class_entry *ce, amf3_env_t *env TSRMLS_DC) {
 	int pos = 0;
-	const char *className = Z_OBJ_CLASS_NAME_P(val);
-	int idx = amf3_getTraitsIdx(env, className, strlen(className));
+	int idx = amf3_getTraitsIdx(env, ce->name, ce->name_length);
 	if (idx >= 0) {
 		pos += amf3_encodeU29(chunk, (idx << 2) | 1); // encode as a reference
 	} else {
-		HashTable *ht = Z_OBJPROP_P(val);
-		HashPosition hp;
-		zval **hv;
-		char *key;
-		int keyType;
-		uint keyLen;
-		ulong idx;
-
-		if (instanceof_function(Z_OBJCE_P(val), zend_standard_class_def TSRMLS_CC)) {
+		if (instanceof_function(ce, zend_standard_class_def TSRMLS_CC)) {
 			pos += amf3_encodeU29(chunk, AMF3_TRAITS_DYNAMIC);
 			pos += amf3_encodeChar(chunk, 0x01); // empty class name
 		} else {
-			// count number of properties
+			HashTable *ht = Z_OBJPROP_P(val);
+			HashPosition hp;
+			zval **hv;
+			char *key;
+			int keyType;
+			uint keyLen;
+			ulong idx;
 			int members = 0;
+
+			// count number of properties
 			for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
 				keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
 				if (keyType == HASH_KEY_IS_STRING) {
@@ -476,7 +475,7 @@ static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, amf3_env_t *
 			}
 
 			pos += amf3_encodeU29(chunk, (members << 4) | AMF3_TRAITS_TYPED);
-			pos += amf3_encodeStr(chunk, className, strlen(className), env);
+			pos += amf3_encodeStr(chunk, ce->name, ce->name_length, env);
 
 			// write property names
 			for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
@@ -496,8 +495,9 @@ static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, amf3_env_t *
 
 static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRMLS_DC) {
 	int pos = 0, idx;
+	zend_class_entry *ce = Z_OBJCE_P(val);
 
-	if (instanceof_function(Z_OBJCE_P(val), php_date_get_date_ce() TSRMLS_CC)) {
+	if (instanceof_function(ce, php_date_get_date_ce() TSRMLS_CC)) {
 		pos += amf3_encodeDate(chunk, val, env TSRMLS_CC);
 		return pos;
 	}
@@ -515,8 +515,8 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TS
 		uint keyLen;
 		ulong idx;
 
-		pos += amf3_encodeObjectTraits(chunk, val, env TSRMLS_CC);
-		if (instanceof_function(Z_OBJCE_P(val), zend_standard_class_def TSRMLS_CC)) { // encode as dynamic anonymous object
+		pos += amf3_encodeObjectTraits(chunk, val, ce, env TSRMLS_CC);
+		if (instanceof_function(ce, zend_standard_class_def TSRMLS_CC)) { // encode as dynamic anonymous object
 			for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
 				keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
 				if (keyType == HASH_KEY_IS_STRING) {
