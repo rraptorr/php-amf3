@@ -992,7 +992,9 @@ static void amf3_destroyEnv(amf3_env_t *env) {
 /* ============================================================================================================ */
 
 
-PHP_FUNCTION(amf3_encode) { // string amf3_encode(mixed value)
+/* {{{ proto string amf3_encode(mixed value)
+   Encodes given value into AMF3 */
+PHP_FUNCTION(amf3_encode) {
 	zval *val;
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &val) == FAILURE) {
 		RETURN_FALSE;
@@ -1008,8 +1010,11 @@ PHP_FUNCTION(amf3_encode) { // string amf3_encode(mixed value)
 	buf[size] = 0;
 	RETURN_STRINGL(buf, size, 0);
 }
+/* }}} */
 
-PHP_FUNCTION(amf3_decode) { // mixed amf3_decode(string data [, int &count])
+/* {{{ proto mixed amf3_decode(string data [, int &count])
+   Decodes given AMF3 data to PHP type */
+PHP_FUNCTION(amf3_decode) {
 	char *data;
 	int size;
 	zval *count = 0;
@@ -1028,3 +1033,4 @@ PHP_FUNCTION(amf3_decode) { // mixed amf3_decode(string data [, int &count])
 		RETURN_NULL();
 	}
 }
+/* }}} */
