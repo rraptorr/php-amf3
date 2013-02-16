@@ -461,8 +461,8 @@ static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, zend_class_e
 			for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
 				keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
 				if (keyType == HASH_KEY_IS_STRING) {
-					if (keyLen <= 1 || key[0] == 0 || key[0] == '_') {
-						continue; // skip empty key, private/protected properties and properties starting with '_'
+					if (keyLen <= 1 || key[0] == 0) {
+						continue; // skip empty key and private/protected properties
 					}
 					members++;
 				}
@@ -475,8 +475,8 @@ static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, zend_class_e
 			for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
 				keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
 				if (keyType == HASH_KEY_IS_STRING) {
-					if (keyLen <= 1 || key[0] == 0 || key[0] == '_') {
-						continue; // skip empty key, private/protected properties and properties starting with '_'
+					if (keyLen <= 1 || key[0] == 0) {
+						continue; // skip empty key and private/protected properties
 					}
 					pos += amf3_encodeStr(chunk, key, keyLen - 1, env);
 				}
@@ -514,8 +514,8 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TS
 			for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
 				keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
 				if (keyType == HASH_KEY_IS_STRING) {
-					if (keyLen <= 1 || key[0] == 0 || key[0] == '_') {
-						continue; // skip empty key, private/protected properties and properties starting with '_'
+					if (keyLen <= 1 || key[0] == 0) {
+						continue; // skip empty key and private/protected properties
 					}
 					pos += amf3_encodeStr(chunk, key, keyLen - 1, env);
 					pos += amf3_encodeVal(chunk, *hv, env TSRMLS_CC);
@@ -528,8 +528,8 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TS
 			for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
 				keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
 				if (keyType == HASH_KEY_IS_STRING) {
-					if (keyLen <= 1 || key[0] == 0 || key[0] == '_') {
-						continue; // skip empty key, private/protected properties and properties starting with '_'
+					if (keyLen <= 1 || key[0] == 0) {
+						continue; // skip empty key and private/protected properties
 					}
 					pos += amf3_encodeVal(chunk, *hv, env TSRMLS_CC);
 				}

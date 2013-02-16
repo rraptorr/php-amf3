@@ -10,7 +10,6 @@ function autoloader($class) {
 	class DTO {
 		private $private = "private value";
 		protected $protected = "protected value";
-		public $_underscore = "underscore value";
 		public $field;
 		public $id;
 	}
