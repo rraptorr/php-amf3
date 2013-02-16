@@ -375,11 +375,13 @@ static int amf3_encodeDate(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRM
 		pos += amf3_encodeU29(chunk, idx << 1); // encode as a reference
 	} else {
 		zval *return_value;
+		double date;
 
 		zend_call_method_with_0_params(&val, NULL, NULL, "getTimestamp", &return_value);
 
 		pos += amf3_encodeU29(chunk, 1);
-		pos += amf3_encodeDouble(chunk, Z_LVAL_P(return_value) * 1000);
+		date = Z_LVAL_P(return_value);
+		pos += amf3_encodeDouble(chunk, date * 1000.0);
 
 		FREE_ZVAL(return_value);
 	}
