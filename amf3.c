@@ -93,7 +93,7 @@ enum amf3_type_e {
 	AMF3_DATE          = 0x08,
 	AMF3_ARRAY         = 0x09,
 	AMF3_OBJECT        = 0x0a, // without externalizable
-	AMF3_XML           = 0x0b, // no support
+	AMF3_XML           = 0x0b,
 	AMF3_BYTEARRAY     = 0x0c, // no support
 	AMF3_VECTOR_INT    = 0x0d, // no support
 	AMF3_VECTOR_UINT   = 0x0e, // no support
@@ -440,6 +440,31 @@ static int amf3_encodeArray(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSR
 	return pos;
 }
 
+static int amf3_encodeXml(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRMLS_DC) {
+	int pos = amf3_encodeChar(chunk, AMF3_XML);
+	int idx = amf3_getObjIdx(env, val);
+	if (idx >= 0) {
+		pos += amf3_encodeU29(chunk, idx << 1); // encode as a reference
+	} else {
+		zval *xml;
+		int xmlLen;
+
+		zend_call_method_with_0_params(&val, NULL, NULL, "asXML", &xml);
+
+		xmlLen = Z_STRLEN_P(xml);
+		if (xmlLen > AMF3_MAX_INT) {
+			xmlLen = AMF3_MAX_INT;
+		}
+		pos += amf3_encodeU29(chunk, (xmlLen << 1) | 1);
+		*chunk = amf3_appendChunk(*chunk, Z_STRVAL_P(xml), xmlLen);
+		pos += xmlLen;
+
+		zval_dtor(xml);
+		FREE_ZVAL(xml);
+	}
+	return pos;
+}
+
 static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, zend_class_entry *ce, amf3_env_t *env TSRMLS_DC) {
 	int pos = 0;
 	int idx = amf3_getTraitsIdx(env, ce);
@@ -495,6 +520,9 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TS
 
 	if (instanceof_function(ce, php_date_get_date_ce() TSRMLS_CC)) {
 		pos += amf3_encodeDate(chunk, val, env TSRMLS_CC);
+		return pos;
+	} else if(!strncmp("SimpleXMLElement", ce->name, ce->name_length)) {
+		pos += amf3_encodeXml(chunk, val, env TSRMLS_CC);
 		return pos;
 	}
 
@@ -818,6 +846,51 @@ static int amf3_decodeObject(zval **val, const char *data, int pos, int size, am
 	return pos - oldPos;
 }
 
+static int amf3_decodeXml(zval **val, const char *data, int pos, int size, amf3_env_t *env TSRMLS_DC) {
+	int oldPos = pos;
+	int pfx, res = amf3_decodeU29(&pfx, data + pos, size - pos);
+	if (res < 0) {
+		php_error(E_WARNING, "Can't decode XML prefix at position %d", pos);
+		return -1;
+	}
+	pos += res;
+	if (!(pfx & 1)) { // decode as a reference
+		*val = amf3_getRef(&env->objs, pfx >> 1);
+		if (!*val) {
+			php_error(E_WARNING, "Missing XML reference index at position %d", pos - res);
+			return -1;
+		}
+		Z_SET_ISREF_PP(val);
+	} else {
+		zval simplexml_load_string, *xml;
+
+		pfx >>= 1;
+		if ((pfx < 0) || ((pos + pfx) > size)) {
+			php_error(E_WARNING, "Can't decode XML at position %d", pos);
+			return -1;
+		}
+
+		INIT_ZVAL(simplexml_load_string);
+		ZVAL_STRINGL(&simplexml_load_string, "simplexml_load_string", sizeof("simplexml_load_string") - 1, 0);
+
+		amf3_initVal(val);
+
+		MAKE_STD_ZVAL(xml);
+		ZVAL_STRINGL(xml, data + pos, pfx, 0);
+		if(call_user_function(EG(function_table), NULL, &simplexml_load_string, *val, 1, &xml TSRMLS_CC) == FAILURE ||
+		   (Z_TYPE_PP(val) == IS_BOOL && !Z_BVAL_PP(val))) {
+			php_error(E_WARNING, "Can't load XML at position %d", pos);
+			FREE_ZVAL(xml);
+			return -1;
+		}
+		FREE_ZVAL(xml);
+
+		amf3_putRef(&env->objs, *val);
+		pos += pfx;
+	}
+	return pos - oldPos;
+}
+
 static int amf3_decodeVal(zval **val, const char *data, int pos, int size, amf3_env_t *env TSRMLS_DC) {
 	if ((pos < 0) || (pos >= size)) {
 		php_error(E_WARNING, "Can't decode type specifier at position %d", pos);
@@ -941,6 +1014,14 @@ static int amf3_decodeVal(zval **val, const char *data, int pos, int size, amf3_
 		}
 		case AMF3_OBJECT: {
 			int res = amf3_decodeObject(val, data, pos, size, env TSRMLS_CC);
+			if (res < 0) {
+				return -1; // nested error
+			}
+			pos += res;
+			break;
+		}
+	    case AMF3_XML: {
+			int res = amf3_decodeXml(val, data, pos, size, env TSRMLS_CC);
 			if (res < 0) {
 				return -1; // nested error
 			}
