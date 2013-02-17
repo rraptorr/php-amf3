@@ -43,6 +43,15 @@ static const zend_function_entry amf3_functions[] = {
 	PHP_FE_END
 };
 
+static PHP_MINFO_FUNCTION(amf3)
+{
+	php_info_print_table_start();
+	php_info_print_table_header(2, "AMF3 support", "enabled");
+	php_info_print_table_row(2, "Version", PHP_AMF3_VERSION);
+	php_info_print_table_row(2, "Build Date", __DATE__ " " __TIME__);
+	php_info_print_table_end();
+}
+
 zend_module_entry amf3_module_entry = {
 	STANDARD_MODULE_HEADER,
 	"amf3",
@@ -59,15 +68,6 @@ zend_module_entry amf3_module_entry = {
 #ifdef COMPILE_DL_AMF3
 ZEND_GET_MODULE(amf3)
 #endif
-
-PHP_MINFO_FUNCTION(amf3)
-{
-	php_info_print_table_start();
-	php_info_print_table_header(2, "AMF3 support", "enabled");
-	php_info_print_table_row(2, "Version", PHP_AMF3_VERSION);
-	php_info_print_table_row(2, "Build Date", __DATE__ " " __TIME__);
-	php_info_print_table_end();
-}
 
 /* ============================================================================================================ */
 
