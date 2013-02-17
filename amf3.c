@@ -89,7 +89,7 @@ enum amf3_type_e {
 	AMF3_INTEGER       = 0x04,
 	AMF3_DOUBLE        = 0x05,
 	AMF3_STRING        = 0x06,
-	AMF3_XMLDOC        = 0x07, // no support
+	AMF3_XMLDOC        = 0x07, // only decoding
 	AMF3_DATE          = 0x08,
 	AMF3_ARRAY         = 0x09,
 	AMF3_OBJECT        = 0x0a, // without externalizable
@@ -1020,7 +1020,8 @@ static int amf3_decodeVal(zval **val, const char *data, int pos, int size, amf3_
 			pos += res;
 			break;
 		}
-	    case AMF3_XML: {
+		case AMF3_XMLDOC:
+		case AMF3_XML: {
 			int res = amf3_decodeXml(val, data, pos, size, env TSRMLS_CC);
 			if (res < 0) {
 				return -1; // nested error
