@@ -139,11 +139,10 @@ static int amf3_decodeVal(zval **val, const char *data, int pos, int size, amf3_
 static amf3_chunk_t *amf3_initChunk() {
 	amf3_chunk_t *chunk;
 
-	chunk = emalloc(sizeof(*chunk));
+	chunk = ecalloc(1, sizeof(*chunk));
 	if (!chunk) {
 		return NULL;
 	}
-	memset(chunk, 0, sizeof(*chunk));
 	return chunk;
 }
 
@@ -755,7 +754,6 @@ static int amf3_decodeObject(zval **val, const char *data, int pos, int size, am
 			pos += res;
 
 			traits = ecalloc(1, sizeof(*traits));
-			memset(traits, 0, sizeof(*traits));
 			zend_hash_index_update(&env->traits, zend_hash_num_elements(&env->traits), &traits, sizeof(traits), NULL);
 
 			if (keyLen) {
