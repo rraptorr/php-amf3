@@ -29,12 +29,12 @@
 #include "php_amf3.h"
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_amf3_encode, 0, 0, 1)
-    ZEND_ARG_INFO(0, value)
+	ZEND_ARG_INFO(0, value)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_amf3_decode, 0, 0, 1)
-    ZEND_ARG_INFO(0, data)
-    ZEND_ARG_INFO(1, count)
+	ZEND_ARG_INFO(0, data)
+	ZEND_ARG_INFO(1, count)
 ZEND_END_ARG_INFO()
 
 static const zend_function_entry amf3_functions[] = {
@@ -529,7 +529,7 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TS
 	if (instanceof_function(ce, php_date_get_date_ce() TSRMLS_CC)) {
 		pos += amf3_encodeDate(chunk, val, env TSRMLS_CC);
 		return pos;
-	} else if(sxe_get_element_class_entry && instanceof_function(ce, sxe_get_element_class_entry() TSRMLS_CC)) {
+	} else if (sxe_get_element_class_entry && instanceof_function(ce, sxe_get_element_class_entry() TSRMLS_CC)) {
 		pos += amf3_encodeXml(chunk, val, env TSRMLS_CC);
 		return pos;
 	}
@@ -885,8 +885,8 @@ static int amf3_decodeXml(zval **val, const char *data, int pos, int size, amf3_
 
 		MAKE_STD_ZVAL(xml);
 		ZVAL_STRINGL(xml, data + pos, pfx, 0);
-		if(call_user_function(EG(function_table), NULL, &simplexml_load_string, *val, 1, &xml TSRMLS_CC) == FAILURE ||
-		   (Z_TYPE_PP(val) == IS_BOOL && !Z_BVAL_PP(val))) {
+		if (call_user_function(EG(function_table), NULL, &simplexml_load_string, *val, 1, &xml TSRMLS_CC) == FAILURE ||
+			(Z_TYPE_PP(val) == IS_BOOL && !Z_BVAL_PP(val))) {
 			php_error(E_WARNING, "Can't load XML at position %d", pos);
 			FREE_ZVAL(xml);
 			return -1;
