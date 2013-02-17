@@ -43,20 +43,28 @@ static const zend_function_entry amf3_functions[] = {
 	PHP_FE_END
 };
 
+static zend_class_entry *(*sxe_get_element_class_entry)();
+
 static PHP_MINFO_FUNCTION(amf3)
 {
 	php_info_print_table_start();
 	php_info_print_table_header(2, "AMF3 support", "enabled");
 	php_info_print_table_row(2, "Version", PHP_AMF3_VERSION);
 	php_info_print_table_row(2, "Build Date", __DATE__ " " __TIME__);
+	php_info_print_table_row(2, "XML support", sxe_get_element_class_entry ? "enabled" : "disabled");
 	php_info_print_table_end();
+}
+
+static PHP_MINIT_FUNCTION(amf3)
+{
+	sxe_get_element_class_entry = DL_FETCH_SYMBOL(NULL, "sxe_get_element_class_entry");
 }
 
 zend_module_entry amf3_module_entry = {
 	STANDARD_MODULE_HEADER,
 	"amf3",
 	amf3_functions,
-	NULL,
+	PHP_MINIT(amf3),
 	NULL,
 	NULL,
 	NULL,
@@ -521,7 +529,7 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TS
 	if (instanceof_function(ce, php_date_get_date_ce() TSRMLS_CC)) {
 		pos += amf3_encodeDate(chunk, val, env TSRMLS_CC);
 		return pos;
-	} else if(!strncmp("SimpleXMLElement", ce->name, ce->name_length)) {
+	} else if(sxe_get_element_class_entry && instanceof_function(ce, sxe_get_element_class_entry() TSRMLS_CC)) {
 		pos += amf3_encodeXml(chunk, val, env TSRMLS_CC);
 		return pos;
 	}
