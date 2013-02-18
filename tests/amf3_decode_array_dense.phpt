@@ -2,9 +2,11 @@
 AMF3 decoding - dense array
 --FILE--
 <?php
+$count = 0;
 $amf3 = pack("H*", "090b0104010402040306076162630607717765");
-$data = amf3_decode($amf3);
+$data = amf3_decode($amf3, $count);
 var_dump($data);
+var_dump($count);
 ?>
 --EXPECT--
 array(5) {
@@ -19,3 +21,4 @@ array(5) {
   [4]=>
   string(3) "qwe"
 }
+int(19)

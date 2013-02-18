@@ -9,9 +9,11 @@ class DTO {
 	public $id;
 }
 
+$count = 0;
 $amf3 = pack("H*", "0a230744544f0b6669656c64056964060b76616c7565048526");
-$data = amf3_decode($amf3);
+$data = amf3_decode($amf3, $count);
 var_dump($data);
+var_dump($count);
 ?>
 --EXPECT--
 object(DTO)#1 (4) {
@@ -24,3 +26,4 @@ object(DTO)#1 (4) {
   ["id"]=>
   int(678)
 }
+int(25)

@@ -2,7 +2,10 @@
 AMF3 decoding - undefined type
 --FILE--
 <?php
-var_dump(amf3_decode(pack("H*", "00")));
+$count = 0;
+var_dump(amf3_decode(pack("H*", "00"), $count));
+var_dump($count);
 ?>
 --EXPECT--
 NULL
+int(1)

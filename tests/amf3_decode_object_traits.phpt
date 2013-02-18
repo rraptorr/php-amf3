@@ -6,9 +6,11 @@ class DTO {
 	public $field = "value";
 }
 
+$count = 0;
 $amf3 = pack("H*", "0905010a130744544f0b6669656c64060b76616c75650a010604");
-$data = amf3_decode($amf3);
+$data = amf3_decode($amf3, $count);
 var_dump($data);
+var_dump($count);
 ?>
 --EXPECT--
 array(2) {
@@ -23,3 +25,4 @@ array(2) {
     string(5) "value"
   }
 }
+int(26)

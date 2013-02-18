@@ -4,9 +4,11 @@ AMF3 decoding - XMLDocument
 <?php if (!extension_loaded("simplexml")) echo "skip simplexml extension required"; ?>
 --FILE--
 <?php
+$count = 0;
 $amf3 = pack("H*", "090501075b3c3f786d6c2076657273696f6e3d22312e30223f3e0a3c783e3c6120617474723d2276616c222f3e3c2f783e0a0702");
-$data = amf3_decode($amf3);
+$data = amf3_decode($amf3, $count);
 var_dump($data);
+var_dump($count);
 ?>
 --EXPECT--
 array(2) {
@@ -33,3 +35,4 @@ array(2) {
     }
   }
 }
+int(52)
