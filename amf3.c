@@ -58,6 +58,8 @@ static PHP_MINFO_FUNCTION(amf3)
 static PHP_MINIT_FUNCTION(amf3)
 {
 	sxe_get_element_class_entry = DL_FETCH_SYMBOL(NULL, "sxe_get_element_class_entry");
+
+	return SUCCESS;
 }
 
 zend_module_entry amf3_module_entry = {
@@ -759,7 +761,7 @@ static int amf3_decodeObject(zval **val, const char *data, int pos, int size, am
 			if (keyLen) {
 				int ret;
 				// do not try to autoload class, autoloading based on user supplied data is a bad idea
-#if PHP_MAJOR_VERSION >= 5 && PHP_MINOR_VERSION >= 4
+#if PHP_MAJOR_VERSION > 5 || (PHP_MAJOR_VERSION == 5 && PHP_MINOR_VERSION >= 4)
 				ret = zend_lookup_class_ex(key, keyLen, NULL, 0, &traits->ce TSRMLS_CC);
 #else
 				ret = zend_lookup_class_ex(key, keyLen, 0, &traits->ce TSRMLS_CC);
