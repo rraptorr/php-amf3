@@ -5,7 +5,7 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
   <name>amf3</name>
-  <uri>https://github.com/downloads/rraptorr/php-amf3/amf3-0.1.0</uri>
+  <uri>https://github.com/downloads/rraptorr/php-amf3/amf3-0.1.1</uri>
   <summary>PHP AMF3 extension</summary>
   <description>
     PHP AMF3 extensions offers two functions to encode/decode PHP
@@ -25,7 +25,7 @@
   </developer>
   <date>2013-03-13</date>
   <version>
-    <release>0.1.0</release>
+    <release>0.1.1</release>
     <api>0.1.0</api>
   </version>
   <stability>
