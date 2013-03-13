@@ -54,6 +54,13 @@ Usage constraints
 
 - NULL, boolean, integer, float (double), string and array values are
   fully convertible back and forth to their corresponding types
+
+- Objects are encoded with their corresponding class information
+  (class name and members list). Objects of stdClass are encoded as
+  anonymous classes with dynamic members.
+- Dates are encoded from/to DateTime objects.
+- If XML extension is enabled, XML datatypes are encoded from/to
+  SimpleXMLElement objects.
 - In a special case, PHP integers are converted into AMF3 doubles according
   to the specification (see the link below)
 - Encoder's string reference table is maintained comparing strings by value
