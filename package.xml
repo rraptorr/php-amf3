@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package
+    packagerversion="1.9.4" version="2.0"
+    xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
+  <name>amf3</name>
+  <uri>https://github.com/downloads/rraptorr/php-amf3/amf3-1.1.0</uri>
+  <summary>PHP AMF3 extension</summary>
+  <description>
+    PHP AMF3 extensions offers two functions to encode/decode PHP
+    value to/from AMF3 format.
+  </description>
+  <lead>
+    <name>Janusz Dziemidowicz</name>
+    <user>rraptorr</user>
+    <email>rraptorr@nails.eu.org</email>
+    <active>yes</active>
+  </lead>
+  <developer>
+    <name>Arseny Vakhrushev</name>
+    <user>neoxic</user>
+    <email>arseny.vakhrushev@gmail.com</email>
+    <active>no</active>
+  </developer>
+  <date>2013-03-13</date>
+  <version>
+    <release>1.1.0</release>
+    <api>1.1.0</api>
+  </version>
+  <stability>
+    <release>beta</release>
+    <api>beta</api>
+  </stability>
+  <license filesource="LICENSE">GPLv2</license>
+  <notes>
+    A lot of changes, most notably support for encoding/decoding objects.
+  </notes>
+  <contents>
+    <dir name="/">
+      <file role="doc" name="CREDITS"/>
+      <file role="doc" name="LICENSE"/>
+      <file role="doc" name="README"/>
+      <file role="src" name="config.m4"/>
+      <file role="src" name="amf3.c"/>
+      <file role="src" name="php_amf3.h"/>
+      <dir name="tests">
+	<file role="test" name="amf3_decode_array_assoc.phpt"/>
+	<file role="test" name="amf3_decode_array_dense.phpt"/>
+	<file role="test" name="amf3_decode_array_empty.phpt"/>
+	<file role="test" name="amf3_decode_array_invalid_reference.phpt"/>
+	<file role="test" name="amf3_decode_array_nested_error.phpt"/>
+	<file role="test" name="amf3_decode_array_reference.phpt"/>
+	<file role="test" name="amf3_decode_bool.phpt"/>
+	<file role="test" name="amf3_decode_date_invalid.phpt"/>
+	<file role="test" name="amf3_decode_date.phpt"/>
+	<file role="test" name="amf3_decode_float.phpt"/>
+	<file role="test" name="amf3_decode_int.phpt"/>
+	<file role="test" name="amf3_decode_null.phpt"/>
+	<file role="test" name="amf3_decode_object_anonymous.phpt"/>
+	<file role="test" name="amf3_decode_object_anonymous_reference.phpt"/>
+	<file role="test" name="amf3_decode_object_autoload.phpt"/>
+	<file role="test" name="amf3_decode_object_constructor.phpt"/>
+	<file role="test" name="amf3_decode_object_externalizable.phpt"/>
+	<file role="test" name="amf3_decode_object_invalid_reference.phpt"/>
+	<file role="test" name="amf3_decode_object_invalid_traits.phpt"/>
+	<file role="test" name="amf3_decode_object_nested_error.phpt"/>
+	<file role="test" name="amf3_decode_object_reference.phpt"/>
+	<file role="test" name="amf3_decode_object_traits.phpt"/>
+	<file role="test" name="amf3_decode_object_typed.phpt"/>
+	<file role="test" name="amf3_decode_string_invalid_reference.phpt"/>
+	<file role="test" name="amf3_decode_string.phpt"/>
+	<file role="test" name="amf3_decode_undefined.phpt"/>
+	<file role="test" name="amf3_decode_xmldoc.phpt"/>
+	<file role="test" name="amf3_decode_xml_invalid.phpt"/>
+	<file role="test" name="amf3_decode_xml.phpt"/>
+	<file role="test" name="amf3_encode_array_assoc.phpt"/>
+	<file role="test" name="amf3_encode_array_dense.phpt"/>
+	<file role="test" name="amf3_encode_array_empty.phpt"/>
+	<file role="test" name="amf3_encode_array_reference.phpt"/>
+	<file role="test" name="amf3_encode_bool.phpt"/>
+	<file role="test" name="amf3_encode_date.phpt"/>
+	<file role="test" name="amf3_encode_float.phpt"/>
+	<file role="test" name="amf3_encode_int.phpt"/>
+	<file role="test" name="amf3_encode_null.phpt"/>
+	<file role="test" name="amf3_encode_object_anonymous.phpt"/>
+	<file role="test" name="amf3_encode_object_anonymous_reference.phpt"/>
+	<file role="test" name="amf3_encode_object_reference.phpt"/>
+	<file role="test" name="amf3_encode_object_traits.phpt"/>
+	<file role="test" name="amf3_encode_object_typed.phpt"/>
+	<file role="test" name="amf3_encode_string.phpt"/>
+	<file role="test" name="amf3_encode_xml.phpt"/>
+      </dir>
+    </dir>
+  </contents>
+  <dependencies>
+    <required>
+      <php>
+	<min>5.3.0</min>
+      </php>
+      <pearinstaller>
+	<min>1.9.0</min>
+      </pearinstaller>
+    </required>
+  </dependencies>
+  <providesextension>amf3</providesextension>
+  <extsrcrelease/>
+</package>
