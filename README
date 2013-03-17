@@ -78,3 +78,8 @@ references were managed implicitly, there would be no control over this behavior
 NOTE: A PHP array is encoded as a sequence (dense array) when it has integer keys
 that start with zero and have no gaps. In all other cases, an array is considered
 as an associative array to avoid ambiguity.
+
+NOTE: All objects are encoded as having additional dynamic properties
+(possibly empty). This is caused by the fact that objects in PHP work
+exactly like that, one can assign any dynamic properties to any
+object.

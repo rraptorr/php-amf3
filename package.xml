@@ -61,11 +61,14 @@
         <file role="test" name="amf3_decode_object_autoload.phpt"/>
         <file role="test" name="amf3_decode_object_constructor.phpt"/>
         <file role="test" name="amf3_decode_object_externalizable.phpt"/>
+        <file role="test" name="amf3_decode_object_invalid_dynamic.phpt"/>
+        <file role="test" name="amf3_decode_object_invalid_property.phpt"/>
         <file role="test" name="amf3_decode_object_invalid_reference.phpt"/>
         <file role="test" name="amf3_decode_object_invalid_traits.phpt"/>
         <file role="test" name="amf3_decode_object_nested_error.phpt"/>
         <file role="test" name="amf3_decode_object_reference.phpt"/>
         <file role="test" name="amf3_decode_object_traits.phpt"/>
+        <file role="test" name="amf3_decode_object_typed_dynamic.phpt"/>
         <file role="test" name="amf3_decode_object_typed.phpt"/>
         <file role="test" name="amf3_decode_string_invalid_reference.phpt"/>
         <file role="test" name="amf3_decode_string.phpt"/>
@@ -86,6 +89,7 @@
         <file role="test" name="amf3_encode_object_anonymous_reference.phpt"/>
         <file role="test" name="amf3_encode_object_reference.phpt"/>
         <file role="test" name="amf3_encode_object_traits.phpt"/>
+        <file role="test" name="amf3_encode_object_typed_dynamic.phpt"/>
         <file role="test" name="amf3_encode_object_typed.phpt"/>
         <file role="test" name="amf3_encode_string.phpt"/>
         <file role="test" name="amf3_encode_xml.phpt"/>

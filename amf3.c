@@ -83,8 +83,6 @@ ZEND_GET_MODULE(amf3)
 
 #define AMF3_MAX_INT     268435455 //  (2^28)-1
 #define AMF3_MIN_INT    -268435456 // -(2^28)
-#define AMF3_TRAITS_TYPED   0x03 // 0011
-#define AMF3_TRAITS_DYNAMIC 0x0b // 1011
 
 typedef enum amf3_type_e amf3_type_t;
 typedef struct amf3_chunk_s amf3_chunk_t;
@@ -481,7 +479,7 @@ static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, zend_class_e
 		pos += amf3_encodeU29(chunk, (idx << 2) | 1); // encode as a reference
 	} else {
 		if (instanceof_function(ce, zend_standard_class_def TSRMLS_CC)) {
-			pos += amf3_encodeU29(chunk, AMF3_TRAITS_DYNAMIC);
+			pos += amf3_encodeU29(chunk, 0x0b);
 			pos += amf3_encodeChar(chunk, 0x01); // empty class name
 		} else {
 			HashTable *ht = Z_OBJPROP_P(val);
@@ -500,11 +498,14 @@ static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, zend_class_e
 					if (keyLen <= 1 || key[0] == 0) {
 						continue; // skip empty key and private/protected properties
 					}
+					if (!zend_hash_quick_exists(&ce->properties_info, key, keyLen, zend_get_hash_value(key, keyLen))) {
+						continue; // skip dynamic properties
+					}
 					members++;
 				}
 			}
 
-			pos += amf3_encodeU29(chunk, (members << 4) | AMF3_TRAITS_TYPED);
+			pos += amf3_encodeU29(chunk, (members << 4) | 0x0b);
 			pos += amf3_encodeStr(chunk, ce->name, ce->name_length, env);
 
 			// write property names
@@ -513,6 +514,9 @@ static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, zend_class_e
 				if (keyType == HASH_KEY_IS_STRING) {
 					if (keyLen <= 1 || key[0] == 0) {
 						continue; // skip empty key and private/protected properties
+					}
+					if (!zend_hash_quick_exists(&ce->properties_info, key, keyLen, zend_get_hash_value(key, keyLen))) {
+						continue; // skip dynamic properties
 					}
 					pos += amf3_encodeStr(chunk, key, keyLen - 1, env);
 				}
@@ -570,9 +574,28 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TS
 					if (keyLen <= 1 || key[0] == 0) {
 						continue; // skip empty key and private/protected properties
 					}
+					if (!zend_hash_quick_exists(&ce->properties_info, key, keyLen, zend_get_hash_value(key, keyLen))) {
+						continue; // skip dynamic properties
+					}
 					pos += amf3_encodeVal(chunk, *hv, env TSRMLS_CC);
 				}
 			}
+
+			for (zend_hash_internal_pointer_reset_ex(ht, &hp); zend_hash_get_current_data_ex(ht, (void **)&hv, &hp) == SUCCESS; zend_hash_move_forward_ex(ht, &hp)) {
+				keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
+				if (keyType == HASH_KEY_IS_STRING) {
+					if (keyLen <= 1 || key[0] == 0) {
+						continue; // skip empty key and private/protected properties
+					}
+					if (zend_hash_quick_exists(&ce->properties_info, key, keyLen, zend_get_hash_value(key, keyLen))) {
+						continue;
+					}
+					pos += amf3_encodeStr(chunk, key, keyLen - 1, env);
+					pos += amf3_encodeVal(chunk, *hv, env TSRMLS_CC);
+				}
+			}
+
+			pos += amf3_encodeChar(chunk, 0x01); // end of dynamic members
 		}
 	}
 	return pos;
@@ -774,6 +797,8 @@ static int amf3_decodeObject(zval **val, const char *data, int pos, int size, am
 
 			traits->memberCount = members;
 			if (members > 0) {
+				char *tmpBuf;
+
 				traits->members = ecalloc(traits->memberCount, sizeof(*traits->members));
 				traits->memberLengths = ecalloc(traits->memberCount, sizeof(*traits->memberLengths));
 				for (members = 0; members < traits->memberCount; members++) {
@@ -781,15 +806,29 @@ static int amf3_decodeObject(zval **val, const char *data, int pos, int size, am
 					if (res < 0) {
 						return -1; // nested error
 					}
+					if (!keyLen || key[0] == 0) {
+						php_error(E_WARNING, "Invalid member name at position %d", pos);
+						return -1;
+					}
+
+					tmpBuf = emalloc(keyLen + 1);
+					memcpy(tmpBuf, key, keyLen);
+					tmpBuf[keyLen] = 0;
+					if (!zend_hash_quick_exists(&(*traits->ce)->properties_info, tmpBuf, keyLen + 1, zend_get_hash_value(tmpBuf, keyLen + 1))) {
+						efree(tmpBuf);
+						php_error(E_WARNING, "Unknown member name at position %d", pos);
+						return -1;
+					}
+					efree(tmpBuf);
+
 					pos += res;
 
-					// TODO: check if the member exists
 					traits->members[members] = estrndup(key, keyLen);
 					traits->memberLengths[members] = keyLen + 1;
 				}
 			}
 
-			traits->dynamic = (pfx & 0x0f) == AMF3_TRAITS_DYNAMIC;
+			traits->dynamic = pfx & 0x08;
 		}
 
 		amf3_initVal(val);
@@ -817,6 +856,8 @@ static int amf3_decodeObject(zval **val, const char *data, int pos, int size, am
 		}
 
 		if (traits->dynamic) { // dynamic members
+			char *tmpBuf;
+
 			for ( ;; ) {
 				res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env);
 				if (res < 0) {
@@ -826,6 +867,22 @@ static int amf3_decodeObject(zval **val, const char *data, int pos, int size, am
 				pos += res;
 				if (!keyLen) {
 					break;
+				}
+				if (key[0] == 0) {
+					php_error(E_WARNING, "Invalid dynamic property name at position %d", pos - res);
+					return -1;
+				}
+
+				if (traits->ce) {
+					tmpBuf = emalloc(keyLen + 1);
+					memcpy(tmpBuf, key, keyLen);
+					tmpBuf[keyLen] = 0;
+					if (zend_hash_quick_exists(&(*traits->ce)->properties_info, tmpBuf, keyLen + 1, zend_get_hash_value(tmpBuf, keyLen + 1))) {
+						efree(tmpBuf);
+						php_error(E_WARNING, "Invalid dynamic property name at position %d", pos - res);
+						return -1;
+					}
+					efree(tmpBuf);
 				}
 
 				prop = 0;
