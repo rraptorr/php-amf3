@@ -23,7 +23,7 @@
     <email>arseny.vakhrushev@gmail.com</email>
     <active>no</active>
   </developer>
-  <date>2013-03-13</date>
+  <date>2013-03-27</date>
   <version>
     <release>0.1.1</release>
     <api>0.1.0</api>
@@ -67,6 +67,7 @@
         <file role="test" name="amf3_decode_object_invalid_traits.phpt"/>
         <file role="test" name="amf3_decode_object_nested_error.phpt"/>
         <file role="test" name="amf3_decode_object_reference.phpt"/>
+        <file role="test" name="amf3_decode_object_stdclass_subclass.phpt"/>
         <file role="test" name="amf3_decode_object_traits.phpt"/>
         <file role="test" name="amf3_decode_object_typed_dynamic.phpt"/>
         <file role="test" name="amf3_decode_object_typed.phpt"/>
@@ -88,6 +89,7 @@
         <file role="test" name="amf3_encode_object_anonymous.phpt"/>
         <file role="test" name="amf3_encode_object_anonymous_reference.phpt"/>
         <file role="test" name="amf3_encode_object_reference.phpt"/>
+        <file role="test" name="amf3_encode_object_stdclass_subclass.phpt"/>
         <file role="test" name="amf3_encode_object_traits.phpt"/>
         <file role="test" name="amf3_encode_object_typed_dynamic.phpt"/>
         <file role="test" name="amf3_encode_object_typed.phpt"/>
