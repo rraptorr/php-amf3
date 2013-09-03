@@ -120,7 +120,6 @@ struct amf3_env_s {
 	HashTable        strs;
 	HashTable        objs;
 	HashTable        traits;
-	int              emptyStringSeen;
 };
 
 struct amf3_traits_s {
@@ -182,9 +181,6 @@ static void amf3_freeChunk(amf3_chunk_t *chunk, char *buf) {
 }
 
 static int amf3_getStrIdx(amf3_env_t *env, const char *str, int len) {
-	if (len == 0 && !env->emptyStringSeen) {
-		env->emptyStringSeen = 1;
-	}
 	if (len <= 0) {
 		return -1; // empty string is never sent by reference
 	}
@@ -195,7 +191,7 @@ static int amf3_getStrIdx(amf3_env_t *env, const char *str, int len) {
 	if (zend_hash_find(&env->strs, str, len, (void **)&oldIdx) == SUCCESS) {
 		return *oldIdx;
 	}
-	int newIdx = zend_hash_num_elements(&env->strs) + env->emptyStringSeen;
+	int newIdx = zend_hash_num_elements(&env->strs);
 	if (newIdx <= AMF3_MAX_INT) {
 		zend_hash_add(&env->strs, str, len, &newIdx, sizeof(newIdx), NULL);
 	}
@@ -369,12 +365,6 @@ static int amf3_decodeStr(const char **str, int *len, const char *buf, int size,
 		*str = buf + pos;
 		*len = pfx;
 		if (pfx > 0) { // empty string is never sent by reference
-			zval *val;
-			ALLOC_INIT_ZVAL(val);
-			ZVAL_STRINGL(val, buf + pos, pfx, 1);
-			zend_hash_index_update(&env->strs, zend_hash_num_elements(&env->strs), &val, sizeof(val), NULL);
-		} else if (!env->emptyStringSeen) {
-			env->emptyStringSeen = 1;
 			zval *val;
 			ALLOC_INIT_ZVAL(val);
 			ZVAL_STRINGL(val, buf + pos, pfx, 1);
