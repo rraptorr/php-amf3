@@ -562,7 +562,7 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TS
 					}
 					pos += amf3_encodeStr(chunk, key, keyLen - 1, env);
 					pos += amf3_encodeVal(chunk, *hv, env TSRMLS_CC);
-				} else if(keyType == HASH_KEY_IS_LONG) {
+				} else if (keyType == HASH_KEY_IS_LONG) {
 					// arrays with integer indexes when cast to object produce
 					// objects with integer property names
 					keyLen = sprintf(keyBuf, "%ld", idx);
