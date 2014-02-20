@@ -547,7 +547,7 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TS
 		HashTable *ht = Z_OBJPROP_P(val);
 		HashPosition hp;
 		zval **hv;
-		char *key;
+		char *key, keyBuf[22];
 		int keyType;
 		uint keyLen;
 		ulong idx;
@@ -561,6 +561,12 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TS
 						continue; // skip empty key and private/protected properties
 					}
 					pos += amf3_encodeStr(chunk, key, keyLen - 1, env);
+					pos += amf3_encodeVal(chunk, *hv, env TSRMLS_CC);
+				} else if(keyType == HASH_KEY_IS_LONG) {
+					// arrays with integer indexes when cast to object produce
+					// objects with integer property names
+					keyLen = sprintf(keyBuf, "%ld", idx);
+					pos += amf3_encodeStr(chunk, keyBuf, keyLen, env);
 					pos += amf3_encodeVal(chunk, *hv, env TSRMLS_CC);
 				}
 			}
