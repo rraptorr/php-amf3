@@ -5,7 +5,7 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
   <name>amf3</name>
-  <uri>https://github.com/rraptorr/php-amf3/archive/v0.1.2</uri>
+  <uri>https://github.com/rraptorr/php-amf3/archive/v0.2.0</uri>
   <summary>PHP AMF3 extension</summary>
   <description>
     PHP AMF3 extensions offers two functions to encode/decode PHP
@@ -23,18 +23,18 @@
     <email>arseny.vakhrushev@gmail.com</email>
     <active>no</active>
   </developer>
-  <date>2014-02-20</date>
+  <date>2014-03-06</date>
   <version>
-    <release>0.1.2</release>
-    <api>0.1.0</api>
+    <release>0.2.0</release>
+    <api>0.2.0</api>
   </version>
   <stability>
     <release>beta</release>
-    <api>beta</api>
+    <api>stable</api>
   </stability>
   <license filesource="LICENSE">GPLv2</license>
   <notes>
-    A lot of changes, most notably support for encoding/decoding objects.
+- Support for byte array decoding
   </notes>
   <contents>
     <dir name="/">
@@ -115,4 +115,48 @@
   </dependencies>
   <providesextension>amf3</providesextension>
   <extsrcrelease/>
+  <changelog>
+    <release>
+      <date>2013-03-13</date>
+      <version>
+        <release>0.1.0</release>
+        <api>0.1.0</api>
+      </version>
+      <stability>
+        <release>beta</release>
+        <api>beta</api>
+      </stability>
+      <notes>
+- A lot of changes, most notably support for encoding/decoding objects
+      </notes>
+    </release>
+    <release>
+      <date>2013-03-27</date>
+      <version>
+        <release>0.1.1</release>
+        <api>0.1.0</api>
+      </version>
+      <stability>
+        <release>beta</release>
+        <api>beta</api>
+      </stability>
+      <notes>
+- Improve object encoding/decoding
+      </notes>
+    </release>
+    <release>
+      <date>2014-02-20</date>
+      <version>
+        <release>0.1.2</release>
+        <api>0.1.0</api>
+      </version>
+      <stability>
+        <release>beta</release>
+        <api>beta</api>
+      </stability>
+      <notes>
+- Fix objects with integer property names
+      </notes>
+    </release>
+  </changelog>
 </package>
