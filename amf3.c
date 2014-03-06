@@ -102,7 +102,7 @@ enum amf3_type_e {
 	AMF3_ARRAY         = 0x09,
 	AMF3_OBJECT        = 0x0a, // without externalizable
 	AMF3_XML           = 0x0b,
-	AMF3_BYTEARRAY     = 0x0c, // no support
+	AMF3_BYTEARRAY     = 0x0c, // only decoding
 	AMF3_VECTOR_INT    = 0x0d, // no support
 	AMF3_VECTOR_UINT   = 0x0e, // no support
 	AMF3_VECTOR_DOUBLE = 0x0f, // no support
@@ -1100,6 +1100,33 @@ static int amf3_decodeVal(zval **val, const char *data, int pos, int size, amf3_
 			pos += res;
 			break;
 		}
+	  case AMF3_BYTEARRAY: {
+			int pfx, res = amf3_decodeU29(&pfx, data + pos, size - pos);
+			if (res < 0) {
+				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't decode byte array prefix at position %d", pos);
+				return -1;
+			}
+			pos += res;
+			if (!(pfx & 1)) { // decode as a reference
+				*val = amf3_getRef(&env->objs, pfx >> 1);
+				if (!*val) {
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Missing byte array reference index at position %d", pos - res);
+					return -1;
+				}
+				Z_SET_ISREF_PP(val);
+			} else {
+				pfx >>= 1;
+				if ((pfx < 0) || ((pos + pfx) > size)) {
+					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid byte array length at position %d", pos - res);
+					return -1;
+				}
+				amf3_initVal(val);
+				ZVAL_STRINGL(*val, data + pos, pfx, 1);
+				pos += pfx;
+				amf3_putRef(&env->objs, *val);
+			}
+			break;
+	  }
 		default:
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unsupported value type 0x%02X at position %d", type, pos - 1);
 			return -1;

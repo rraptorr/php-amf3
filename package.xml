@@ -51,6 +51,10 @@
         <file role="test" name="amf3_decode_array_nested_error.phpt"/>
         <file role="test" name="amf3_decode_array_reference.phpt"/>
         <file role="test" name="amf3_decode_bool.phpt"/>
+        <file role="test" name="amf3_decode_byte_array.phpt"/>
+        <file role="test" name="amf3_decode_byte_array_invalid.phpt"/>
+        <file role="test" name="amf3_decode_byte_array_invalid_reference.phpt"/>
+        <file role="test" name="amf3_decode_byte_array_reference.phpt"/>
         <file role="test" name="amf3_decode_date_invalid.phpt"/>
         <file role="test" name="amf3_decode_date.phpt"/>
         <file role="test" name="amf3_decode_float.phpt"/>
