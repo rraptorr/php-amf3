@@ -57,7 +57,7 @@ static PHP_MINFO_FUNCTION(amf3)
 
 static PHP_MINIT_FUNCTION(amf3)
 {
-	sxe_get_element_class_entry = DL_FETCH_SYMBOL(NULL, "sxe_get_element_class_entry");
+	sxe_get_element_class_entry = (zend_class_entry * (*)())DL_FETCH_SYMBOL(NULL, "sxe_get_element_class_entry");
 
 	return SUCCESS;
 }
@@ -139,7 +139,7 @@ static int amf3_decodeVal(zval **val, const char *data, int pos, int size, amf3_
 static amf3_chunk_t *amf3_initChunk() {
 	amf3_chunk_t *chunk;
 
-	chunk = ecalloc(1, sizeof(*chunk));
+	chunk = (amf3_chunk_t *)ecalloc(1, sizeof(*chunk));
 	if (!chunk) {
 		return NULL;
 	}
@@ -702,7 +702,7 @@ static int amf3_decodeArray(zval **val, const char *data, int pos, int size, amf
 					keyBuf[keyLen] = 0;
 					add_assoc_zval_ex(*val, keyBuf, keyLen + 1, hv);
 				} else {
-					char *tmpBuf = emalloc(keyLen + 1);
+					char *tmpBuf = (char *)emalloc(keyLen + 1);
 					memcpy(tmpBuf, key, keyLen);
 					tmpBuf[keyLen] = 0;
 					add_assoc_zval_ex(*val, tmpBuf, keyLen + 1, hv);
@@ -784,7 +784,7 @@ static int amf3_decodeObject(zval **val, const char *data, int pos, int size, am
 			}
 			pos += res;
 
-			traits = ecalloc(1, sizeof(*traits));
+			traits = (amf3_traits_t *)ecalloc(1, sizeof(*traits));
 			zend_hash_index_update(&env->traits, zend_hash_num_elements(&env->traits), &traits, sizeof(traits), NULL);
 
 			if (keyLen) {
@@ -805,8 +805,8 @@ static int amf3_decodeObject(zval **val, const char *data, int pos, int size, am
 			if (members > 0) {
 				char *tmpBuf;
 
-				traits->members = ecalloc(traits->memberCount, sizeof(*traits->members));
-				traits->memberLengths = ecalloc(traits->memberCount, sizeof(*traits->memberLengths));
+				traits->members = (char **)ecalloc(traits->memberCount, sizeof(*traits->members));
+				traits->memberLengths = (int *)ecalloc(traits->memberCount, sizeof(*traits->memberLengths));
 				for (members = 0; members < traits->memberCount; members++) {
 					res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env); // member names
 					if (res < 0) {
@@ -817,7 +817,7 @@ static int amf3_decodeObject(zval **val, const char *data, int pos, int size, am
 						return -1;
 					}
 
-					tmpBuf = emalloc(keyLen + 1);
+					tmpBuf = (char *)emalloc(keyLen + 1);
 					memcpy(tmpBuf, key, keyLen);
 					tmpBuf[keyLen] = 0;
 					if (!zend_hash_quick_exists(&(*traits->ce)->properties_info, tmpBuf, keyLen + 1, zend_get_hash_value(tmpBuf, keyLen + 1))) {
@@ -880,7 +880,7 @@ static int amf3_decodeObject(zval **val, const char *data, int pos, int size, am
 				}
 
 				if (traits->ce) {
-					tmpBuf = emalloc(keyLen + 1);
+					tmpBuf = (char *)emalloc(keyLen + 1);
 					memcpy(tmpBuf, key, keyLen);
 					tmpBuf[keyLen] = 0;
 					if (zend_hash_quick_exists(&(*traits->ce)->properties_info, tmpBuf, keyLen + 1, zend_get_hash_value(tmpBuf, keyLen + 1))) {
@@ -899,7 +899,7 @@ static int amf3_decodeObject(zval **val, const char *data, int pos, int size, am
 						keyBuf[keyLen] = 0;
 						add_property_zval_ex(*val, keyBuf, keyLen + 1, prop TSRMLS_CC);
 					} else {
-						char *tmpBuf = emalloc(keyLen + 1);
+						char *tmpBuf = (char *)emalloc(keyLen + 1);
 						memcpy(tmpBuf, key, keyLen);
 						tmpBuf[keyLen] = 0;
 						add_property_zval_ex(*val, tmpBuf, keyLen + 1, prop TSRMLS_CC);
@@ -968,7 +968,7 @@ static int amf3_decodeVal(zval **val, const char *data, int pos, int size, amf3_
 		return -1;
 	}
 	int oldPos = pos;
-	amf3_type_t type = (unsigned char)data[pos++];
+	amf3_type_t type = (unsigned int)data[pos++];
 	switch (type) {
 		case AMF3_UNDEFINED:
 		case AMF3_NULL:
@@ -1065,7 +1065,7 @@ static int amf3_decodeVal(zval **val, const char *data, int pos, int size, amf3_
 				amf3_initVal(val);
 				bufLen = snprintf(buf, sizeof(buf), "%.0f", d/1000.0);
 				php_date_instantiate(php_date_get_date_ce(), *val TSRMLS_CC);
-				if (!php_date_initialize(zend_object_store_get_object(*val TSRMLS_CC), buf, bufLen, "U", NULL, 0 TSRMLS_CC)) {
+				if (!php_date_initialize((php_date_obj *)zend_object_store_get_object(*val TSRMLS_CC), buf, bufLen, "U", NULL, 0 TSRMLS_CC)) {
 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't initialize date at position %d", pos);
 					return -1;
 				}
@@ -1181,7 +1181,7 @@ PHP_FUNCTION(amf3_encode) {
 	amf3_initEnv(&env, 0);
 	int size = amf3_encodeVal(&current, val, &env TSRMLS_CC);
 	amf3_destroyEnv(&env);
-	char *buf = emalloc(size + 1);
+	char *buf = (char *)emalloc(size + 1);
 	amf3_freeChunk(begin, buf);
 	buf[size] = 0;
 	RETURN_STRINGL(buf, size, 0);
