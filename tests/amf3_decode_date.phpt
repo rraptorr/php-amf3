@@ -10,12 +10,12 @@ $data = amf3_decode($amf3, $count);
 var_dump($data);
 var_dump($count);
 ?>
---EXPECT--
+--EXPECTF--
 array(2) {
   [0]=>
   &object(DateTime)#1 (3) {
     ["date"]=>
-    string(19) "2013-02-11 23:09:09"
+    string(%d) "2013-02-11 23:09:09%S"
     ["timezone_type"]=>
     int(1)
     ["timezone"]=>
@@ -24,7 +24,7 @@ array(2) {
   [1]=>
   &object(DateTime)#1 (3) {
     ["date"]=>
-    string(19) "2013-02-11 23:09:09"
+    string(%d) "2013-02-11 23:09:09%S"
     ["timezone_type"]=>
     int(1)
     ["timezone"]=>
