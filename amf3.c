@@ -345,7 +345,7 @@ static int amf3_encodeStr(amf3_chunk_t **chunk, const char *str, int len, amf3_e
 	return pos;
 }
 
-static int amf3_decodeStr(const char **str, int *len, const char *buf, int size, amf3_env_t *env) {
+static int amf3_decodeStr(const char **str, unsigned int *len, const char *buf, int size, amf3_env_t *env) {
 	int pfx, pos = amf3_decodeU29(&pfx, buf, size);
 	if (pos < 0) {
 		return -1;
@@ -405,12 +405,12 @@ static int amf3_encodeArray(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSR
 		HashPosition hp;
 		zval **hv;
 		char *key, keyBuf[22];
-		int keyType;
+		int keyType, num = 0;
 		uint keyLen;
-		ulong idx, num = 0;
+		ulong idx;
 		for (zend_hash_internal_pointer_reset_ex(ht, &hp);; zend_hash_move_forward_ex(ht, &hp)) {
 			keyType = zend_hash_get_current_key_ex(ht, &key, &keyLen, &idx, 0, &hp);
-			if ((keyType != HASH_KEY_IS_LONG) || (idx != num)) {
+			if ((keyType != HASH_KEY_IS_LONG) || (idx != (ulong)num)) {
 				break;
 			}
 			++num;
@@ -681,7 +681,7 @@ static int amf3_decodeArray(zval **val, const char *data, int pos, int size, amf
 		amf3_putRef(&env->objs, *val);
 		const char *key;
 		char keyBuf[64];
-		int keyLen;
+		unsigned int keyLen;
 		zval *hv;
 		for ( ;; ) { // associative array portion
 			res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env);
@@ -749,7 +749,7 @@ static int amf3_decodeObject(zval **val, const char *data, int pos, int size, am
 		int members;
 		const char *key;
 		char keyBuf[64];
-		int keyLen;
+		unsigned int keyLen;
 		zval *prop;
 
 		if (!(pfx & 2)) { // decode traits as a reference
