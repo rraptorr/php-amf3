@@ -534,6 +534,9 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TS
 	if (instanceof_function(ce, php_date_get_date_ce() TSRMLS_CC)) {
 		pos += amf3_encodeDate(chunk, val, env TSRMLS_CC);
 		return pos;
+	} else if(instanceof_function(ce, php_date_get_immutable_ce() TSRMLS_CC)) {
+		pos += amf3_encodeDate(chunk, val, env TSRMLS_CC);
+		return pos;
 	} else if (sxe_get_element_class_entry && instanceof_function(ce, sxe_get_element_class_entry() TSRMLS_CC)) {
 		pos += amf3_encodeXml(chunk, val, env TSRMLS_CC);
 		return pos;
@@ -790,11 +793,7 @@ static int amf3_decodeObject(zval **val, const char *data, int pos, int size, am
 			if (keyLen) {
 				int ret;
 				// do not try to autoload class, autoloading based on user supplied data is a bad idea
-#if PHP_MAJOR_VERSION > 5 || (PHP_MAJOR_VERSION == 5 && PHP_MINOR_VERSION >= 4)
 				ret = zend_lookup_class_ex(key, keyLen, NULL, 0, &traits->ce TSRMLS_CC);
-#else
-				ret = zend_lookup_class_ex(key, keyLen, 0, &traits->ce TSRMLS_CC);
-#endif
 				if (ret == FAILURE) {
 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to find class at position %d", pos - res);
 					return -1;
