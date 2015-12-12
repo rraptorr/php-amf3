@@ -1,5 +1,5 @@
 --TEST--
-AMF3 encoding - date
+AMF3 encoding - immutable date
 --INI--
 date.timezone=UTC
 --FILE--
