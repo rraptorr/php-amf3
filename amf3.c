@@ -64,7 +64,7 @@ static PHP_MINIT_FUNCTION(amf3)
 
 static const zend_module_dep amf3_deps[] = {
 	ZEND_MOD_REQUIRED("date")
-	ZEND_MOD_OPTIONAL("simplexml")
+	ZEND_MOD_OPTIONAL("SimpleXML")
 	ZEND_MOD_END
 };
 
