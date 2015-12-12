@@ -526,6 +526,9 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TS
 	if (instanceof_function(ce, php_date_get_date_ce() TSRMLS_CC)) {
 		pos += amf3_encodeDate(chunk, val, env TSRMLS_CC);
 		return pos;
+	} else if (instanceof_function(ce, php_date_get_immutable_ce() TSRMLS_CC)) {
+		pos += amf3_encodeDate(chunk, val, env TSRMLS_CC);
+		return pos;
 	} else if (sxe_get_element_class_entry && instanceof_function(ce, sxe_get_element_class_entry() TSRMLS_CC)) {
 		pos += amf3_encodeXml(chunk, val, env TSRMLS_CC);
 		return pos;
