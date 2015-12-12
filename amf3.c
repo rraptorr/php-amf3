@@ -646,16 +646,6 @@ static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRML
 	return pos;
 }
 
-static void amf3_initVal(zval *val) {
-	// TODO ?!
-	/*if (*val) {
-		zval_dtor(*val);
-		ZVAL_NULL(*val);
-	} else {
-		ALLOC_INIT_ZVAL(*val);
-	}*/
-}
-
 static int amf3_decodeArray(zval *val, const char *data, int pos, int size, amf3_env_t *env TSRMLS_DC) {
 	int oldPos = pos;
 	int pfx, res = amf3_decodeU29(&pfx, data + pos, size - pos);
@@ -677,7 +667,6 @@ static int amf3_decodeArray(zval *val, const char *data, int pos, int size, amf3
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid dense array portion size at position %d", pos - res);
 			return -1;
 		}
-		//amf3_initVal(val);
 		array_init(val);
 		amf3_putRef(&env->objs, val);
 		const char *key;
@@ -699,13 +688,11 @@ static int amf3_decodeArray(zval *val, const char *data, int pos, int size, amf3
 			if (!Z_ISUNDEF(hv)) { // need a trailing \0 in the key buffer to do a proper call to 'add_assoc_zval_ex'
 				if (keyLen < sizeof(keyBuf)) {
 					memcpy(keyBuf, key, keyLen);
-					keyBuf[keyLen] = 0;
-					add_assoc_zval_ex(val, keyBuf, keyLen + 1, &hv);
+					add_assoc_zval_ex(val, keyBuf, keyLen, &hv);
 				} else {
-					char *tmpBuf = (char *)emalloc(keyLen + 1);
+					char *tmpBuf = (char *)emalloc(keyLen);
 					memcpy(tmpBuf, key, keyLen);
-					tmpBuf[keyLen] = 0;
-					add_assoc_zval_ex(val, tmpBuf, keyLen + 1, &hv);
+					add_assoc_zval_ex(val, tmpBuf, keyLen, &hv);
 					efree(tmpBuf);
 				}
 			}
@@ -814,10 +801,9 @@ static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf
 						return -1;
 					}
 
-					tmpBuf = (char *)emalloc(keyLen + 1);
+					tmpBuf = (char *)emalloc(keyLen);
 					memcpy(tmpBuf, key, keyLen);
-					tmpBuf[keyLen] = 0;
-					if (!zend_hash_str_exists(&traits->ce->properties_info, tmpBuf, keyLen + 1)) {
+					if (!zend_hash_str_exists(&traits->ce->properties_info, tmpBuf, keyLen)) {
 						efree(tmpBuf);
 						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unknown member name at position %d", pos);
 						return -1;
@@ -827,14 +813,13 @@ static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf
 					pos += res;
 
 					traits->members[members] = estrndup(key, keyLen);
-					traits->memberLengths[members] = keyLen + 1;
+					traits->memberLengths[members] = keyLen;
 				}
 			}
 
 			traits->dynamic = pfx & 0x08;
 		}
 
-		amf3_initVal(val);
 		if (traits->ce) {
 			object_init_ex(val, traits->ce);
 			if (traits->ce->constructor) {
@@ -876,10 +861,9 @@ static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf
 				}
 
 				if (traits->ce) {
-					tmpBuf = (char *)emalloc(keyLen + 1);
+					tmpBuf = (char *)emalloc(keyLen);
 					memcpy(tmpBuf, key, keyLen);
-					tmpBuf[keyLen] = 0;
-					if (zend_hash_str_exists(&traits->ce->properties_info, tmpBuf, keyLen + 1)) {
+					if (zend_hash_str_exists(&traits->ce->properties_info, tmpBuf, keyLen)) {
 						efree(tmpBuf);
 						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid dynamic property name at position %d", pos - res);
 						return -1;
@@ -891,13 +875,11 @@ static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf
 				if (!Z_ISUNDEF(prop)) { // need a trailing \0 in the key buffer to do a proper call to 'add_property_zval_ex'
 					if (keyLen < sizeof(keyBuf)) {
 						memcpy(keyBuf, key, keyLen);
-						keyBuf[keyLen] = 0;
-						add_property_zval_ex(val, keyBuf, keyLen + 1, &prop TSRMLS_CC);
+						add_property_zval_ex(val, keyBuf, keyLen, &prop TSRMLS_CC);
 					} else {
-						char *tmpBuf = (char *)emalloc(keyLen + 1);
+						char *tmpBuf = (char *)emalloc(keyLen);
 						memcpy(tmpBuf, key, keyLen);
-						tmpBuf[keyLen] = 0;
-						add_property_zval_ex(val, tmpBuf, keyLen + 1, &prop TSRMLS_CC);
+						add_property_zval_ex(val, tmpBuf, keyLen, &prop TSRMLS_CC);
 						efree(tmpBuf);
 					}
 					Z_TRY_DELREF_P(&prop);
@@ -939,8 +921,6 @@ static int amf3_decodeXml(zval *val, const char *data, int pos, int size, amf3_e
 		//INIT_ZVAL(simplexml_load_string);
 		ZVAL_STRINGL(&simplexml_load_string, "simplexml_load_string", sizeof("simplexml_load_string") - 1);
 
-		amf3_initVal(val);
-
 		ZVAL_STRINGL(&xml, data + pos, pfx);
 		if (call_user_function(EG(function_table), NULL, &simplexml_load_string, val, 1, &xml TSRMLS_CC) == FAILURE ||
 			(Z_TYPE_P(val) == IS_FALSE)) {
@@ -964,15 +944,12 @@ static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_e
 	switch (type) {
 		case AMF3_UNDEFINED:
 		case AMF3_NULL:
-			amf3_initVal(val);
 			ZVAL_NULL(val);
 			break;
 		case AMF3_FALSE:
-			amf3_initVal(val);
 			ZVAL_FALSE(val);
 			break;
 		case AMF3_TRUE:
-			amf3_initVal(val);
 			ZVAL_TRUE(val);
 			break;
 		case AMF3_INTEGER: {
@@ -985,7 +962,6 @@ static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_e
 			if (i & 0x10000000) {
 				i |= ~0x1fffffff; // prolong sign bits if negative
 			}
-			amf3_initVal(val);
 			ZVAL_LONG(val, i);
 			pos += res;
 			break;
@@ -997,7 +973,6 @@ static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_e
 				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't decode double at position %d", pos);
 				return -1;
 			}
-			amf3_initVal(val);
 			ZVAL_DOUBLE(val, d);
 			pos += res;
 			break;
@@ -1021,7 +996,6 @@ static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_e
 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid string length at position %d", pos - res);
 					return -1;
 				}
-				amf3_initVal(val);
 				ZVAL_STRINGL(val, data + pos, pfx);
 				pos += pfx;
 				if (pfx > 0) {
@@ -1054,7 +1028,6 @@ static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_e
 					return -1;
 				}
 
-				amf3_initVal(val);
 				bufLen = snprintf(buf, sizeof(buf), "%.0f", d/1000.0);
 				php_date_instantiate(php_date_get_date_ce(), val TSRMLS_CC);
 				if (!php_date_initialize(Z_PHPDATE_P(val), buf, bufLen, "U", NULL, 0 TSRMLS_CC)) {
@@ -1112,7 +1085,6 @@ static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_e
 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid byte array length at position %d", pos - res);
 					return -1;
 				}
-				amf3_initVal(val);
 				ZVAL_STRINGL(val, data + pos, pfx);
 				pos += pfx;
 				amf3_putRef(&env->objs, val);
@@ -1186,9 +1158,9 @@ PHP_FUNCTION(amf3_encode) {
    Decodes given AMF3 data to PHP type */
 PHP_FUNCTION(amf3_decode) {
 	char *data;
-	int size;
-	zval *count = 0;
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|z", &data, &size, &count) == FAILURE) {
+	size_t size;
+	zval *count = NULL;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|z/", &data, &size, &count) == FAILURE) {
 		RETURN_FALSE;
 	}
 	amf3_env_t env;
@@ -1196,10 +1168,10 @@ PHP_FUNCTION(amf3_decode) {
 	int res = amf3_decodeVal(return_value, data, 0, size, &env TSRMLS_CC);
 	amf3_destroyEnv(&env);
 	if (count) {
+		zval_dtor(count);
 		ZVAL_LONG(count, res);
 	}
-	if (res < 0 && return_value) {
-		zval_dtor(return_value);
+	if (res < 0) {
 		RETURN_NULL();
 	}
 }
