@@ -38,9 +38,9 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_amf3_decode, 0, 0, 1)
 ZEND_END_ARG_INFO()
 
 static const zend_function_entry amf3_functions[] = {
-	PHP_FE(amf3_encode, arginfo_amf3_encode)
-	PHP_FE(amf3_decode, arginfo_amf3_decode)
-	PHP_FE_END
+	ZEND_FE(amf3_encode, arginfo_amf3_encode)
+	ZEND_FE(amf3_decode, arginfo_amf3_decode)
+	ZEND_FE_END
 };
 
 static zend_class_entry *(*sxe_get_element_class_entry)();
@@ -62,8 +62,16 @@ static PHP_MINIT_FUNCTION(amf3)
 	return SUCCESS;
 }
 
+static const zend_module_dep amf3_deps[] = {
+	ZEND_MOD_REQUIRED("date")
+	ZEND_MOD_OPTIONAL("SimpleXML")
+	ZEND_MOD_END
+};
+
 zend_module_entry amf3_module_entry = {
-	STANDARD_MODULE_HEADER,
+	STANDARD_MODULE_HEADER_EX,
+	NULL,
+	amf3_deps,
 	"amf3",
 	amf3_functions,
 	PHP_MINIT(amf3),
