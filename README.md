@@ -1,4 +1,4 @@
-AMF3 extension for PHP
+AMF3 extension for PHP [![Build Status](https://travis-ci.org/rraptorr/php-amf3.svg?branch=php7)](https://travis-ci.org/rraptorr/php-amf3)
 ======================
 
 What is PHP AMF3 extension?
@@ -25,10 +25,7 @@ mixed amf3_decode(string data [, int &count])
 Required PHP version
 --------------------
 
-The source code was tested and built for latest PHP 5.3, 5.4 and 5.5. Other PHP
-versions should be theoretically suitable too, but there might be a lack of some
-specific Zend API macros/functions in older versions, or the used macros/functions
-could become deprecated in new versions. Feel free to investigate that.
+This branch is only for PHP 7. It is a work in progress and does not work properly yet.
 
 
 Installation
