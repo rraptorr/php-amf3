@@ -1,0 +1,12 @@
+language: php
+php:
+  - '5.5'
+  - '5.6'
+
+before_script:
+  - phpize
+  - ./configure
+  - make
+
+script:
+  - NO_INTERACTION=1 make test
