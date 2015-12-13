@@ -25,7 +25,7 @@ mixed amf3_decode(string data [, int &count])
 Required PHP version
 --------------------
 
-This extension works with PHP 5.5 and 5.6, PHP 7 is not yet supported.
+This extension works with PHP 5.5 and 5.6. For PHP 7 support see 'php7' branch.
 
 
 Installation
