@@ -2,14 +2,10 @@ language: php
 php:
   - '7.0'
 
-env:
-  - NO_INTERACTION=1
-  - REPORT_EXIT_STATUS=1
-
 before_script:
   - phpize
   - ./configure
   - make
 
 script:
-  - make test
+  - make test REPORT_EXIT_STATUS=1 NO_INTERACTION=1 TRAVIS=0
