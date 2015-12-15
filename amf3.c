@@ -663,11 +663,12 @@ static int amf3_decodeArray(zval *val, const char *data, int pos, int size, amf3
 	}
 	pos += res;
 	if (!(pfx & 1)) { // decode as a reference
-		val = amf3_getRef(&env->objs, pfx >> 1);
-		if (!val) {
+		zval *tmp = amf3_getRef(&env->objs, pfx >> 1);
+		if (!tmp) {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Missing array reference index at position %d", pos - res);
 			return -1;
 		}
+		*val = *tmp;
 	} else {
 		pfx >>= 1;
 		if ((pfx < 0) || ((pos + pfx) > size)) {
@@ -720,11 +721,12 @@ static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf
 	}
 	pos += res;
 	if (!(pfx & 1)) { // decode as a reference
-		val = amf3_getRef(&env->objs, pfx >> 1);
-		if (!val) {
+		zval *tmp = amf3_getRef(&env->objs, pfx >> 1);
+		if (!tmp) {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Missing object reference index at position %d", pos - res);
 			return -1;
 		}
+		*val = *tmp;
 	} else {
 		amf3_traits_t *traits;
 		int members;
@@ -876,11 +878,12 @@ static int amf3_decodeXml(zval *val, const char *data, int pos, int size, amf3_e
 	}
 	pos += res;
 	if (!(pfx & 1)) { // decode as a reference
-		val = amf3_getRef(&env->objs, pfx >> 1);
-		if (!val) {
+		zval *tmp = amf3_getRef(&env->objs, pfx >> 1);
+		if (!tmp) {
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Missing XML reference index at position %d", pos - res);
 			return -1;
 		}
+		*val = *tmp;
 	} else {
 		zval simplexml_load_string, xml;
 
@@ -961,11 +964,12 @@ static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_e
 			}
 			pos += res;
 			if (!(pfx & 1)) { // decode as a reference
-				val = amf3_getRef(&env->strs, pfx >> 1);
-				if (!val) {
+				zval *tmp = amf3_getRef(&env->strs, pfx >> 1);
+				if (!tmp) {
 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Missing string reference index at position %d", pos - res);
 					return -1;
 				}
+				*val = *tmp;
 			} else {
 				pfx >>= 1;
 				if ((pfx < 0) || ((pos + pfx) > size)) {
@@ -988,11 +992,12 @@ static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_e
 			}
 			pos += res;
 			if (!(pfx & 1)) { // decode as a reference
-				val = amf3_getRef(&env->objs, pfx >> 1);
-				if (!val) {
+				zval *tmp = amf3_getRef(&env->objs, pfx >> 1);
+				if (!tmp) {
 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Missing date reference index at position %d", pos - res);
 					return -1;
 				}
+				*val = *tmp;
 			} else {
 				double d;
 				char buf[64];
@@ -1048,11 +1053,12 @@ static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_e
 			}
 			pos += res;
 			if (!(pfx & 1)) { // decode as a reference
-				val = amf3_getRef(&env->objs, pfx >> 1);
-				if (!val) {
+				zval *tmp = amf3_getRef(&env->objs, pfx >> 1);
+				if (!tmp) {
 					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Missing byte array reference index at position %d", pos - res);
 					return -1;
 				}
+				*val = *tmp;
 			} else {
 				pfx >>= 1;
 				if ((pfx < 0) || ((pos + pfx) > size)) {
