@@ -474,7 +474,7 @@ static int amf3_encodeXml(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRML
 		*chunk = amf3_appendChunk(*chunk, Z_STRVAL(xml), xmlLen);
 		pos += xmlLen;
 
-		efree(Z_STR(xml));
+		zend_string_release(Z_STR(xml));
 	}
 	return pos;
 }
@@ -677,7 +677,6 @@ static int amf3_decodeArray(zval *val, const char *data, int pos, int size, amf3
 		array_init(val);
 		amf3_putRef(&env->objs, val);
 		const char *key;
-		char keyBuf[64];
 		unsigned int keyLen;
 		zval hv;
 		for ( ;; ) { // associative array portion
@@ -693,15 +692,7 @@ static int amf3_decodeArray(zval *val, const char *data, int pos, int size, amf3
 
 			res = amf3_decodeVal(&hv, data, pos, size, env TSRMLS_CC);
 			if (res > 0) { // need a trailing \0 in the key buffer to do a proper call to 'add_assoc_zval_ex'
-				if (keyLen < sizeof(keyBuf)) {
-					memcpy(keyBuf, key, keyLen);
-					add_assoc_zval_ex(val, keyBuf, keyLen, &hv);
-				} else {
-					char *tmpBuf = (char *)emalloc(keyLen);
-					memcpy(tmpBuf, key, keyLen);
-					add_assoc_zval_ex(val, tmpBuf, keyLen, &hv);
-					efree(tmpBuf);
-				}
+				add_assoc_zval_ex(val, key, keyLen, &hv);
 			} else {
 				return -1; // nested error
 			}
@@ -738,7 +729,6 @@ static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf
 		amf3_traits_t *traits;
 		int members;
 		const char *key;
-		char keyBuf[64];
 		unsigned int keyLen;
 		zval prop;
 
@@ -792,8 +782,6 @@ static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf
 
 			traits->memberCount = members;
 			if (members > 0) {
-				char *tmpBuf;
-
 				traits->members = (char **)ecalloc(traits->memberCount, sizeof(*traits->members));
 				traits->memberLengths = (int *)ecalloc(traits->memberCount, sizeof(*traits->memberLengths));
 				for (members = 0; members < traits->memberCount; members++) {
@@ -806,14 +794,10 @@ static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf
 						return -1;
 					}
 
-					tmpBuf = (char *)emalloc(keyLen);
-					memcpy(tmpBuf, key, keyLen);
-					if (!zend_hash_str_exists(&traits->ce->properties_info, tmpBuf, keyLen)) {
-						efree(tmpBuf);
+					if (!zend_hash_str_exists(&traits->ce->properties_info, key, keyLen)) {
 						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unknown member name at position %d", pos);
 						return -1;
 					}
-					efree(tmpBuf);
 
 					pos += res;
 
@@ -828,7 +812,7 @@ static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf
 		if (traits->ce) {
 			object_init_ex(val, traits->ce);
 			if (traits->ce->constructor) {
-				zend_call_method_with_0_params(val, traits->ce, &traits->ce->constructor, NULL, NULL);
+				zend_call_method(val, traits->ce, &traits->ce->constructor, NULL, 0, NULL, 0, NULL, NULL);
 			}
 		} else {
 			object_init(val);
@@ -847,8 +831,6 @@ static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf
 		}
 
 		if (traits->dynamic) { // dynamic members
-			char *tmpBuf;
-
 			for ( ;; ) {
 				res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env);
 				if (res < 0) {
@@ -865,27 +847,15 @@ static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf
 				}
 
 				if (traits->ce) {
-					tmpBuf = (char *)emalloc(keyLen);
-					memcpy(tmpBuf, key, keyLen);
-					if (zend_hash_str_exists(&traits->ce->properties_info, tmpBuf, keyLen)) {
-						efree(tmpBuf);
+					if (zend_hash_str_exists(&traits->ce->properties_info, key, keyLen)) {
 						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid dynamic property name at position %d", pos - res);
 						return -1;
 					}
-					efree(tmpBuf);
 				}
 
 				res = amf3_decodeVal(&prop, data, pos, size, env TSRMLS_CC);
 				if (res > 0) { // need a trailing \0 in the key buffer to do a proper call to 'add_property_zval_ex'
-					if (keyLen < sizeof(keyBuf)) {
-						memcpy(keyBuf, key, keyLen);
-						add_property_zval_ex(val, keyBuf, keyLen, &prop TSRMLS_CC);
-					} else {
-						char *tmpBuf = (char *)emalloc(keyLen);
-						memcpy(tmpBuf, key, keyLen);
-						add_property_zval_ex(val, tmpBuf, keyLen, &prop TSRMLS_CC);
-						efree(tmpBuf);
-					}
+					add_property_zval_ex(val, key, keyLen, &prop TSRMLS_CC);
 					Z_TRY_DELREF_P(&prop);
 				} else {
 					return -1; // nested error
@@ -925,12 +895,17 @@ static int amf3_decodeXml(zval *val, const char *data, int pos, int size, amf3_e
 		ZVAL_STRINGL(&xml, data + pos, pfx);
 		if (call_user_function(EG(function_table), NULL, &simplexml_load_string, val, 1, &xml TSRMLS_CC) == FAILURE ||
 			(Z_TYPE_P(val) == IS_FALSE)) {
+			zend_string_release(Z_STR(simplexml_load_string));
+			zend_string_release(Z_STR(xml));
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't load XML at position %d", pos);
 			return -1;
 		}
 
 		amf3_putRef(&env->objs, val);
 		pos += pfx;
+
+		zend_string_release(Z_STR(simplexml_load_string));
+		zend_string_release(Z_STR(xml));
 	}
 	return pos - oldPos;
 }
