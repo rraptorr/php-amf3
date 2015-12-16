@@ -13,7 +13,7 @@ var_dump($count);
 --EXPECT--
 array(2) {
   [0]=>
-  &object(SimpleXMLElement)#1 (1) {
+  object(SimpleXMLElement)#1 (1) {
     ["a"]=>
     object(SimpleXMLElement)#2 (1) {
       ["@attributes"]=>
@@ -24,7 +24,7 @@ array(2) {
     }
   }
   [1]=>
-  &object(SimpleXMLElement)#1 (1) {
+  object(SimpleXMLElement)#1 (1) {
     ["a"]=>
     object(SimpleXMLElement)#2 (1) {
       ["@attributes"]=>

@@ -5,7 +5,7 @@ AMF3 encoding - XML
 --FILE--
 <?php
 $xml = simplexml_load_string("<x><a attr='val'/></x>");
-$data = array(&$xml, &$xml);
+$data = array($xml, $xml);
 $amf3 = amf3_encode($data);
 var_dump(bin2hex($amf3));
 ?>

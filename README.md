@@ -26,7 +26,7 @@ Required PHP version
 --------------------
 
 This branch is only for PHP 7. It is a work in progress and does not work properly yet.
-
+For PHP 5 support see 'php5' branch.
 
 Installation
 ------------
@@ -62,15 +62,10 @@ Usage constraints
   to the specification (see the link below)
 - Encoder's string reference table is maintained comparing strings by value
 - Encoder's object reference table is maintained comparing objects by
-  explicit PHP reference (read the note below)
+  identity (as if using === operator)
 
 Official Adobe AMF3 specification is available here:
 http://download.macromedia.com/pub/labs/amf/amf3_spec_121207.pdf
-
-NOTE: If you want an object to be encoded by reference, you should use an
-explicit reference definition ('&'). This is due to the fact that the native
-ActionScript decoder will reproduce the similar reference links in memory. If then
-references were managed implicitly, there would be no control over this behavior.
 
 NOTE: A PHP array is encoded as a sequence (dense array) when it has integer keys
 that start with zero and have no gaps. In all other cases, an array is considered

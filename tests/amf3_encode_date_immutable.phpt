@@ -5,7 +5,7 @@ date.timezone=UTC
 --FILE--
 <?php
 $date = new DateTimeImmutable('2013-02-11 23:09:09');
-$data = array(&$date, &$date);
+$data = array($date, $date);
 $amf3 = amf3_encode($data);
 var_dump(bin2hex($amf3));
 ?>

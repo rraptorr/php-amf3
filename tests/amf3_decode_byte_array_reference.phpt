@@ -11,8 +11,8 @@ var_dump($count);
 --EXPECT--
 array(2) {
   [0]=>
-  &string(6) "qwe123"
+  string(6) "qwe123"
   [1]=>
-  &string(6) "qwe123"
+  string(6) "qwe123"
 }
 int(13)

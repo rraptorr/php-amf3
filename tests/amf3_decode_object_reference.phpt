@@ -11,12 +11,12 @@ var_dump($count);
 --EXPECT--
 array(2) {
   [0]=>
-  &object(stdClass)#1 (1) {
+  object(stdClass)#1 (1) {
     ["field"]=>
     string(5) "value"
   }
   [1]=>
-  &object(stdClass)#1 (1) {
+  object(stdClass)#1 (1) {
     ["field"]=>
     string(5) "value"
   }
