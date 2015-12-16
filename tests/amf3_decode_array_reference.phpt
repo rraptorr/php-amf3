@@ -11,7 +11,7 @@ var_dump($count);
 --EXPECT--
 array(2) {
   [0]=>
-  &array(3) {
+  array(3) {
     [0]=>
     int(1)
     [1]=>
@@ -20,7 +20,7 @@ array(2) {
     int(3)
   }
   [1]=>
-  &array(3) {
+  array(3) {
     [0]=>
     int(1)
     [1]=>

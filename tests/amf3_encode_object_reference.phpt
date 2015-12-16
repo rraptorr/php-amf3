@@ -3,7 +3,7 @@ AMF3 encoding - object reference
 --FILE--
 <?php
 $dto = (object)array("field" => "value");
-$data = array(&$dto, &$dto);
+$data = array($dto, $dto);
 $amf3 = amf3_encode($data);
 var_dump(bin2hex($amf3));
 ?>

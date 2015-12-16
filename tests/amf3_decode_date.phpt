@@ -13,7 +13,7 @@ var_dump($count);
 --EXPECTF--
 array(2) {
   [0]=>
-  &object(DateTime)#1 (3) {
+  object(DateTime)#1 (3) {
     ["date"]=>
     string(%d) "2013-02-11 23:09:09%S"
     ["timezone_type"]=>
@@ -22,7 +22,7 @@ array(2) {
     string(6) "+00:00"
   }
   [1]=>
-  &object(DateTime)#1 (3) {
+  object(DateTime)#1 (3) {
     ["date"]=>
     string(%d) "2013-02-11 23:09:09%S"
     ["timezone_type"]=>
