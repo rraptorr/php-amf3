@@ -1,4 +1,4 @@
-AMF3 extension for PHP [![Build Status](https://travis-ci.org/rraptorr/php-amf3.svg?branch=master)](https://travis-ci.org/rraptorr/php-amf3)
+AMF3 extension for PHP [![Build Status](https://travis-ci.org/rraptorr/php-amf3.svg?branch=php5)](https://travis-ci.org/rraptorr/php-amf3)
 ======================
 
 What is PHP AMF3 extension?
