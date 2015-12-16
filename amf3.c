@@ -209,15 +209,22 @@ static int amf3_getStrIdx(amf3_env_t *env, const char *str, int len) {
 }
 
 static int amf3_getObjIdx(amf3_env_t *env, zval *val) {
+	void *key = NULL;
+	if (Z_TYPE_P(val) == IS_ARRAY) {
+		key = Z_ARR_P(val);
+	} else if (Z_TYPE_P(val) == IS_OBJECT) {
+		key = Z_OBJ_P(val);
+	}
+
 	zval *oldIdx;
-	if ((oldIdx = zend_hash_str_find(&env->objs, (char *)&val, sizeof(val))) != NULL) {
+	if ((oldIdx = zend_hash_str_find(&env->objs, (char *)&key, sizeof(key))) != NULL) {
 		return Z_LVAL_P(oldIdx);
 	}
 	int newIdx = zend_hash_num_elements(&env->objs);
 	if (newIdx <= AMF3_MAX_INT) {
 		zval tmp;
 		ZVAL_LONG(&tmp, newIdx);
-		zend_hash_str_add(&env->objs, (char *)&val, sizeof(val), &tmp);
+		zend_hash_str_add(&env->objs, (char *)&key, sizeof(key), &tmp);
 	}
 	return -1;
 }
