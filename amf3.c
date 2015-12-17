@@ -138,8 +138,8 @@ struct amf3_traits_s {
 	int              dynamic;
 };
 
-static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRMLS_DC);
-static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_env_t *env TSRMLS_DC);
+static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env);
+static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_env_t *env);
 
 /* ============================================================================================================ */
 
@@ -395,7 +395,7 @@ static int amf3_decodeStr(const char **str, unsigned int *len, const char *buf, 
 	return pos;
 }
 
-static int amf3_encodeDate(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRMLS_DC) {
+static int amf3_encodeDate(amf3_chunk_t **chunk, zval *val, amf3_env_t *env) {
 	int pos = amf3_encodeChar(chunk, AMF3_DATE);
 	int idx = amf3_getObjIdx(env, val);
 	if (idx >= 0) {
@@ -413,7 +413,7 @@ static int amf3_encodeDate(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRM
 	return pos;
 }
 
-static int amf3_encodeArray(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRMLS_DC) {
+static int amf3_encodeArray(amf3_chunk_t **chunk, zval *val, amf3_env_t *env) {
 	int pos = amf3_encodeChar(chunk, AMF3_ARRAY);
 	int idx = amf3_getObjIdx(env, val);
 	if (idx >= 0) {
@@ -440,7 +440,7 @@ static int amf3_encodeArray(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSR
 			pos += amf3_encodeU29(chunk, (num << 1) | 1); // dense part size
 			pos += amf3_encodeChar(chunk, 0x01); // end of associative part
 			ZEND_HASH_FOREACH_VAL(ht, hv) {
-				pos += amf3_encodeVal(chunk, hv, env TSRMLS_CC);
+				pos += amf3_encodeVal(chunk, hv, env);
 			} ZEND_HASH_FOREACH_END();
 		} else { // associative array with mixed keys
 			pos += amf3_encodeChar(chunk, 0x01); // empty dense part
@@ -454,7 +454,7 @@ static int amf3_encodeArray(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSR
 					keyLen = sprintf(keyBuf, "%ld", idx);
 					pos += amf3_encodeStr(chunk, keyBuf, keyLen, env);
 				}
-				pos += amf3_encodeVal(chunk, hv, env TSRMLS_CC);
+				pos += amf3_encodeVal(chunk, hv, env);
 			} ZEND_HASH_FOREACH_END();
 			pos += amf3_encodeChar(chunk, 0x01); // end of associative part
 		}
@@ -462,7 +462,7 @@ static int amf3_encodeArray(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSR
 	return pos;
 }
 
-static int amf3_encodeXml(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRMLS_DC) {
+static int amf3_encodeXml(amf3_chunk_t **chunk, zval *val, amf3_env_t *env) {
 	int pos = amf3_encodeChar(chunk, AMF3_XML);
 	int idx = amf3_getObjIdx(env, val);
 	if (idx >= 0) {
@@ -486,7 +486,7 @@ static int amf3_encodeXml(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRML
 	return pos;
 }
 
-static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, zend_class_entry *ce, amf3_env_t *env TSRMLS_DC) {
+static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, zend_class_entry *ce, amf3_env_t *env) {
 	int pos = 0;
 	int idx = amf3_getTraitsIdx(env, ce);
 	if (idx >= 0) {
@@ -534,18 +534,18 @@ static int amf3_encodeObjectTraits(amf3_chunk_t **chunk, zval *val, zend_class_e
 	return pos;
 }
 
-static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRMLS_DC) {
+static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env) {
 	int pos = 0, idx;
 	zend_class_entry *ce = Z_OBJCE_P(val);
 
-	if (instanceof_function(ce, php_date_get_date_ce() TSRMLS_CC)) {
-		pos += amf3_encodeDate(chunk, val, env TSRMLS_CC);
+	if (instanceof_function(ce, php_date_get_date_ce())) {
+		pos += amf3_encodeDate(chunk, val, env);
 		return pos;
-	} else if (instanceof_function(ce, php_date_get_immutable_ce() TSRMLS_CC)) {
-		pos += amf3_encodeDate(chunk, val, env TSRMLS_CC);
+	} else if (instanceof_function(ce, php_date_get_immutable_ce())) {
+		pos += amf3_encodeDate(chunk, val, env);
 		return pos;
-	} else if (sxe_get_element_class_entry && instanceof_function(ce, sxe_get_element_class_entry() TSRMLS_CC)) {
-		pos += amf3_encodeXml(chunk, val, env TSRMLS_CC);
+	} else if (sxe_get_element_class_entry && instanceof_function(ce, sxe_get_element_class_entry())) {
+		pos += amf3_encodeXml(chunk, val, env);
 		return pos;
 	}
 
@@ -561,7 +561,7 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TS
 		uint keyLen;
 		ulong idx;
 
-		pos += amf3_encodeObjectTraits(chunk, val, ce, env TSRMLS_CC);
+		pos += amf3_encodeObjectTraits(chunk, val, ce, env);
 		if (ce == zend_standard_class_def) { // encode as dynamic anonymous object
 			ZEND_HASH_FOREACH_KEY_VAL(ht, idx, key, hv) {
 				if (key) {
@@ -569,13 +569,13 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TS
 						continue; // skip empty key and private/protected properties
 					}
 					pos += amf3_encodeStr(chunk, key->val, key->len, env);
-					pos += amf3_encodeVal(chunk, hv, env TSRMLS_CC);
+					pos += amf3_encodeVal(chunk, hv, env);
 				} else {
 					// arrays with integer indexes when cast to object produce
 					// objects with integer property names
 					keyLen = sprintf(keyBuf, "%ld", idx);
 					pos += amf3_encodeStr(chunk, keyBuf, keyLen, env);
-					pos += amf3_encodeVal(chunk, hv, env TSRMLS_CC);
+					pos += amf3_encodeVal(chunk, hv, env);
 				}
 			} ZEND_HASH_FOREACH_END();
 
@@ -590,7 +590,7 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TS
 					if (!zend_hash_exists(&ce->properties_info, key)) {
 						continue; // skip dynamic properties
 					}
-					pos += amf3_encodeVal(chunk, hv, env TSRMLS_CC);
+					pos += amf3_encodeVal(chunk, hv, env);
 				}
 			} ZEND_HASH_FOREACH_END();
 
@@ -603,7 +603,7 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TS
 						continue;
 					}
 					pos += amf3_encodeStr(chunk, key->val, key->len, env);
-					pos += amf3_encodeVal(chunk, hv, env TSRMLS_CC);
+					pos += amf3_encodeVal(chunk, hv, env);
 				}
 			} ZEND_HASH_FOREACH_END();
 
@@ -613,7 +613,7 @@ static int amf3_encodeObject(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TS
 	return pos;
 }
 
-static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRMLS_DC) {
+static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env) {
 	int pos = 0;
 	switch (Z_TYPE_P(val)) {
 		case IS_NULL:
@@ -643,43 +643,43 @@ static int amf3_encodeVal(amf3_chunk_t **chunk, zval *val, amf3_env_t *env TSRML
 			pos += amf3_encodeStr(chunk, Z_STRVAL_P(val), Z_STRLEN_P(val), env);
 			break;
 		case IS_ARRAY:
-			pos += amf3_encodeArray(chunk, val, env TSRMLS_CC);
+			pos += amf3_encodeArray(chunk, val, env);
 			break;
 		case IS_OBJECT:
-			pos += amf3_encodeObject(chunk, val, env TSRMLS_CC);
+			pos += amf3_encodeObject(chunk, val, env);
 			break;
 		case IS_REFERENCE:
-			pos += amf3_encodeVal(chunk, Z_REFVAL_P(val), env TSRMLS_CC);
+			pos += amf3_encodeVal(chunk, Z_REFVAL_P(val), env);
 			break;
 		case IS_INDIRECT:
-			pos += amf3_encodeVal(chunk, Z_INDIRECT_P(val), env TSRMLS_CC);
+			pos += amf3_encodeVal(chunk, Z_INDIRECT_P(val), env);
 			break;
 		default:
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to encode unsupported value type %d", Z_TYPE_P(val));
+			php_error_docref(NULL, E_WARNING, "Unable to encode unsupported value type %d", Z_TYPE_P(val));
 			break;
 	}
 	return pos;
 }
 
-static int amf3_decodeArray(zval *val, const char *data, int pos, int size, amf3_env_t *env TSRMLS_DC) {
+static int amf3_decodeArray(zval *val, const char *data, int pos, int size, amf3_env_t *env) {
 	int oldPos = pos;
 	int pfx, res = amf3_decodeU29(&pfx, data + pos, size - pos);
 	if (res < 0) {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't decode array prefix at position %d", pos);
+		php_error_docref(NULL, E_WARNING, "Can't decode array prefix at position %d", pos);
 		return -1;
 	}
 	pos += res;
 	if (!(pfx & 1)) { // decode as a reference
 		zval *tmp = amf3_getRef(&env->objs, pfx >> 1);
 		if (!tmp) {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Missing array reference index at position %d", pos - res);
+			php_error_docref(NULL, E_WARNING, "Missing array reference index at position %d", pos - res);
 			return -1;
 		}
 		*val = *tmp;
 	} else {
 		pfx >>= 1;
 		if ((pfx < 0) || ((pos + pfx) > size)) {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid dense array portion size at position %d", pos - res);
+			php_error_docref(NULL, E_WARNING, "Invalid dense array portion size at position %d", pos - res);
 			return -1;
 		}
 		array_init(val);
@@ -690,7 +690,7 @@ static int amf3_decodeArray(zval *val, const char *data, int pos, int size, amf3
 		for ( ;; ) { // associative array portion
 			res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env);
 			if (res < 0) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't decode array key at position %d", pos);
+				php_error_docref(NULL, E_WARNING, "Can't decode array key at position %d", pos);
 				return -1;
 			}
 			pos += res;
@@ -698,7 +698,7 @@ static int amf3_decodeArray(zval *val, const char *data, int pos, int size, amf3
 				break;
 			}
 
-			res = amf3_decodeVal(&hv, data, pos, size, env TSRMLS_CC);
+			res = amf3_decodeVal(&hv, data, pos, size, env);
 			if (res > 0) { // need a trailing \0 in the key buffer to do a proper call to 'add_assoc_zval_ex'
 				add_assoc_zval_ex(val, key, keyLen, &hv);
 			} else {
@@ -707,7 +707,7 @@ static int amf3_decodeArray(zval *val, const char *data, int pos, int size, amf3
 			pos += res;
 		}
 		while (pfx-- > 0) {
-			res = amf3_decodeVal(&hv, data, pos, size, env TSRMLS_CC);
+			res = amf3_decodeVal(&hv, data, pos, size, env);
 			if (res > 0) {
 				add_next_index_zval(val, &hv);
 			} else {
@@ -719,18 +719,18 @@ static int amf3_decodeArray(zval *val, const char *data, int pos, int size, amf3
 	return pos - oldPos;
 }
 
-static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf3_env_t *env TSRMLS_DC) {
+static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf3_env_t *env) {
 	int oldPos = pos;
 	int pfx, res = amf3_decodeU29(&pfx, data + pos, size - pos);
 	if (res < 0) {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't decode object prefix at position %d", pos);
+		php_error_docref(NULL, E_WARNING, "Can't decode object prefix at position %d", pos);
 		return -1;
 	}
 	pos += res;
 	if (!(pfx & 1)) { // decode as a reference
 		zval *tmp = amf3_getRef(&env->objs, pfx >> 1);
 		if (!tmp) {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Missing object reference index at position %d", pos - res);
+			php_error_docref(NULL, E_WARNING, "Missing object reference index at position %d", pos - res);
 			return -1;
 		}
 		*val = *tmp;
@@ -745,30 +745,30 @@ static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf
 			ulong idx = pfx >> 2;
 			zval *found;
 			if ((found = zend_hash_index_find(&env->traits, idx)) == NULL) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Missing object traits reference index at position %d", pos - res);
+				php_error_docref(NULL, E_WARNING, "Missing object traits reference index at position %d", pos - res);
 				return -1;
 			}
 
 			traits = (amf3_traits_t *)Z_PTR_P(found);
 		} else {
 			if (pfx & 4) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't decode externalizable object at position %d", pos);
+				php_error_docref(NULL, E_WARNING, "Can't decode externalizable object at position %d", pos);
 				return -1;
 			}
 
 			members = pfx >> 4;
 			if ((members < 0) || ((pos + members) > size)) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid number of class members at position %d", pos - res);
+				php_error_docref(NULL, E_WARNING, "Invalid number of class members at position %d", pos - res);
 				return -1;
 			}
 
 			res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env); // class name
 			if (res < 0) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't decode class name at position %d", pos);
+				php_error_docref(NULL, E_WARNING, "Can't decode class name at position %d", pos);
 				return -1;
 			}
 			if (members > 0 && !keyLen) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Empty class name at position %d", pos);
+				php_error_docref(NULL, E_WARNING, "Empty class name at position %d", pos);
 				return -1;
 			}
 			pos += res;
@@ -784,7 +784,7 @@ static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf
 				traits->ce = zend_lookup_class_ex(str, NULL, 0);
 				zend_string_release(str);
 				if (traits->ce == NULL) {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unable to find class at position %d", pos - res);
+					php_error_docref(NULL, E_WARNING, "Unable to find class at position %d", pos - res);
 					return -1;
 				}
 			}
@@ -799,12 +799,12 @@ static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf
 						return -1; // nested error
 					}
 					if (!keyLen || key[0] == 0) {
-						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid member name at position %d", pos);
+						php_error_docref(NULL, E_WARNING, "Invalid member name at position %d", pos);
 						return -1;
 					}
 
 					if (!zend_hash_str_exists(&traits->ce->properties_info, key, keyLen)) {
-						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unknown member name at position %d", pos);
+						php_error_docref(NULL, E_WARNING, "Unknown member name at position %d", pos);
 						return -1;
 					}
 
@@ -829,9 +829,9 @@ static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf
 		amf3_putRef(&env->objs, val);
 
 		for (members = 0; members < traits->memberCount; members++) { // sealed members
-			res = amf3_decodeVal(&prop, data, pos, size, env TSRMLS_CC);
+			res = amf3_decodeVal(&prop, data, pos, size, env);
 			if (res > 0) {
-				add_property_zval_ex(val, traits->members[members], traits->memberLengths[members], &prop TSRMLS_CC);
+				add_property_zval_ex(val, traits->members[members], traits->memberLengths[members], &prop);
 				Z_TRY_DELREF_P(&prop);
 			} else {
 				return -1; // nested error
@@ -843,7 +843,7 @@ static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf
 			for ( ;; ) {
 				res = amf3_decodeStr(&key, &keyLen, data + pos, size - pos, env);
 				if (res < 0) {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't decode dynamic member name at position %d", pos);
+					php_error_docref(NULL, E_WARNING, "Can't decode dynamic member name at position %d", pos);
 					return -1;
 				}
 				pos += res;
@@ -851,20 +851,20 @@ static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf
 					break;
 				}
 				if (key[0] == 0) {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid dynamic property name at position %d", pos - res);
+					php_error_docref(NULL, E_WARNING, "Invalid dynamic property name at position %d", pos - res);
 					return -1;
 				}
 
 				if (traits->ce) {
 					if (zend_hash_str_exists(&traits->ce->properties_info, key, keyLen)) {
-						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid dynamic property name at position %d", pos - res);
+						php_error_docref(NULL, E_WARNING, "Invalid dynamic property name at position %d", pos - res);
 						return -1;
 					}
 				}
 
-				res = amf3_decodeVal(&prop, data, pos, size, env TSRMLS_CC);
+				res = amf3_decodeVal(&prop, data, pos, size, env);
 				if (res > 0) { // need a trailing \0 in the key buffer to do a proper call to 'add_property_zval_ex'
-					add_property_zval_ex(val, key, keyLen, &prop TSRMLS_CC);
+					add_property_zval_ex(val, key, keyLen, &prop);
 					Z_TRY_DELREF_P(&prop);
 				} else {
 					return -1; // nested error
@@ -876,18 +876,18 @@ static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf
 	return pos - oldPos;
 }
 
-static int amf3_decodeXml(zval *val, const char *data, int pos, int size, amf3_env_t *env TSRMLS_DC) {
+static int amf3_decodeXml(zval *val, const char *data, int pos, int size, amf3_env_t *env) {
 	int oldPos = pos;
 	int pfx, res = amf3_decodeU29(&pfx, data + pos, size - pos);
 	if (res < 0) {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't decode XML prefix at position %d", pos);
+		php_error_docref(NULL, E_WARNING, "Can't decode XML prefix at position %d", pos);
 		return -1;
 	}
 	pos += res;
 	if (!(pfx & 1)) { // decode as a reference
 		zval *tmp = amf3_getRef(&env->objs, pfx >> 1);
 		if (!tmp) {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Missing XML reference index at position %d", pos - res);
+			php_error_docref(NULL, E_WARNING, "Missing XML reference index at position %d", pos - res);
 			return -1;
 		}
 		*val = *tmp;
@@ -896,18 +896,18 @@ static int amf3_decodeXml(zval *val, const char *data, int pos, int size, amf3_e
 
 		pfx >>= 1;
 		if ((pfx < 0) || ((pos + pfx) > size)) {
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't decode XML at position %d", pos);
+			php_error_docref(NULL, E_WARNING, "Can't decode XML at position %d", pos);
 			return -1;
 		}
 
 		ZVAL_STRINGL(&simplexml_load_string, "simplexml_load_string", sizeof("simplexml_load_string") - 1);
 
 		ZVAL_STRINGL(&xml, data + pos, pfx);
-		if (call_user_function(EG(function_table), NULL, &simplexml_load_string, val, 1, &xml TSRMLS_CC) == FAILURE ||
+		if (call_user_function(EG(function_table), NULL, &simplexml_load_string, val, 1, &xml) == FAILURE ||
 			(Z_TYPE_P(val) == IS_FALSE)) {
 			zend_string_release(Z_STR(simplexml_load_string));
 			zend_string_release(Z_STR(xml));
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't load XML at position %d", pos);
+			php_error_docref(NULL, E_WARNING, "Can't load XML at position %d", pos);
 			return -1;
 		}
 
@@ -920,9 +920,9 @@ static int amf3_decodeXml(zval *val, const char *data, int pos, int size, amf3_e
 	return pos - oldPos;
 }
 
-static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_env_t *env TSRMLS_DC) {
+static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_env_t *env) {
 	if ((pos < 0) || (pos >= size)) {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't decode type specifier at position %d", pos);
+		php_error_docref(NULL, E_WARNING, "Can't decode type specifier at position %d", pos);
 		return -1;
 	}
 	int oldPos = pos;
@@ -942,7 +942,7 @@ static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_e
 			int i;
 			int res = amf3_decodeU29(&i, data + pos, size - pos);
 			if (res < 0) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't decode integer at position %d", pos);
+				php_error_docref(NULL, E_WARNING, "Can't decode integer at position %d", pos);
 				return -1;
 			}
 			if (i & 0x10000000) {
@@ -956,7 +956,7 @@ static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_e
 			double d;
 			int res = amf3_decodeDouble(&d, data + pos, size - pos);
 			if (res < 0) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't decode double at position %d", pos);
+				php_error_docref(NULL, E_WARNING, "Can't decode double at position %d", pos);
 				return -1;
 			}
 			ZVAL_DOUBLE(val, d);
@@ -966,21 +966,21 @@ static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_e
 		case AMF3_STRING: {
 			int pfx, res = amf3_decodeU29(&pfx, data + pos, size - pos);
 			if (res < 0) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't decode string prefix at position %d", pos);
+				php_error_docref(NULL, E_WARNING, "Can't decode string prefix at position %d", pos);
 				return -1;
 			}
 			pos += res;
 			if (!(pfx & 1)) { // decode as a reference
 				zval *tmp = amf3_getRef(&env->strs, pfx >> 1);
 				if (!tmp) {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Missing string reference index at position %d", pos - res);
+					php_error_docref(NULL, E_WARNING, "Missing string reference index at position %d", pos - res);
 					return -1;
 				}
 				*val = *tmp;
 			} else {
 				pfx >>= 1;
 				if ((pfx < 0) || ((pos + pfx) > size)) {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid string length at position %d", pos - res);
+					php_error_docref(NULL, E_WARNING, "Invalid string length at position %d", pos - res);
 					return -1;
 				}
 				ZVAL_STRINGL(val, data + pos, pfx);
@@ -994,14 +994,14 @@ static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_e
 		case AMF3_DATE: {
 			int pfx, res = amf3_decodeU29(&pfx, data + pos, size - pos);
 			if (res < 0) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't decode date prefix at position %d", pos);
+				php_error_docref(NULL, E_WARNING, "Can't decode date prefix at position %d", pos);
 				return -1;
 			}
 			pos += res;
 			if (!(pfx & 1)) { // decode as a reference
 				zval *tmp = amf3_getRef(&env->objs, pfx >> 1);
 				if (!tmp) {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Missing date reference index at position %d", pos - res);
+					php_error_docref(NULL, E_WARNING, "Missing date reference index at position %d", pos - res);
 					return -1;
 				}
 				*val = *tmp;
@@ -1011,14 +1011,14 @@ static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_e
 				int bufLen;
 				res = amf3_decodeDouble(&d, data + pos, size - pos);
 				if (res < 0 || d < 0.0) {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't decode date at position %d", pos);
+					php_error_docref(NULL, E_WARNING, "Can't decode date at position %d", pos);
 					return -1;
 				}
 
 				bufLen = snprintf(buf, sizeof(buf), "%.0f", d/1000.0);
-				php_date_instantiate(php_date_get_date_ce(), val TSRMLS_CC);
-				if (!php_date_initialize(Z_PHPDATE_P(val), buf, bufLen, "U", NULL, 0 TSRMLS_CC)) {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't initialize date at position %d", pos);
+				php_date_instantiate(php_date_get_date_ce(), val);
+				if (!php_date_initialize(Z_PHPDATE_P(val), buf, bufLen, "U", NULL, 0)) {
+					php_error_docref(NULL, E_WARNING, "Can't initialize date at position %d", pos);
 					return -1;
 				}
 
@@ -1028,7 +1028,7 @@ static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_e
 			break;
 		}
 		case AMF3_ARRAY: {
-			int res = amf3_decodeArray(val, data, pos, size, env TSRMLS_CC);
+			int res = amf3_decodeArray(val, data, pos, size, env);
 			if (res < 0) {
 				return -1; // nested error
 			}
@@ -1036,7 +1036,7 @@ static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_e
 			break;
 		}
 		case AMF3_OBJECT: {
-			int res = amf3_decodeObject(val, data, pos, size, env TSRMLS_CC);
+			int res = amf3_decodeObject(val, data, pos, size, env);
 			if (res < 0) {
 				return -1; // nested error
 			}
@@ -1045,7 +1045,7 @@ static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_e
 		}
 		case AMF3_XMLDOC:
 		case AMF3_XML: {
-			int res = amf3_decodeXml(val, data, pos, size, env TSRMLS_CC);
+			int res = amf3_decodeXml(val, data, pos, size, env);
 			if (res < 0) {
 				return -1; // nested error
 			}
@@ -1055,21 +1055,21 @@ static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_e
 		case AMF3_BYTEARRAY: {
 			int pfx, res = amf3_decodeU29(&pfx, data + pos, size - pos);
 			if (res < 0) {
-				php_error_docref(NULL TSRMLS_CC, E_WARNING, "Can't decode byte array prefix at position %d", pos);
+				php_error_docref(NULL, E_WARNING, "Can't decode byte array prefix at position %d", pos);
 				return -1;
 			}
 			pos += res;
 			if (!(pfx & 1)) { // decode as a reference
 				zval *tmp = amf3_getRef(&env->objs, pfx >> 1);
 				if (!tmp) {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Missing byte array reference index at position %d", pos - res);
+					php_error_docref(NULL, E_WARNING, "Missing byte array reference index at position %d", pos - res);
 					return -1;
 				}
 				*val = *tmp;
 			} else {
 				pfx >>= 1;
 				if ((pfx < 0) || ((pos + pfx) > size)) {
-					php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid byte array length at position %d", pos - res);
+					php_error_docref(NULL, E_WARNING, "Invalid byte array length at position %d", pos - res);
 					return -1;
 				}
 				ZVAL_STRINGL(val, data + pos, pfx);
@@ -1079,7 +1079,7 @@ static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_e
 			break;
 		}
 		default:
-			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Unsupported value type 0x%02X at position %d", type, pos - 1);
+			php_error_docref(NULL, E_WARNING, "Unsupported value type 0x%02X at position %d", type, pos - 1);
 			return -1;
 	}
 	return pos - oldPos;
@@ -1123,7 +1123,7 @@ static void amf3_destroyEnv(amf3_env_t *env) {
    Encodes given value into AMF3 */
 PHP_FUNCTION(amf3_encode) {
 	zval *val;
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "z", &val) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "z", &val) == FAILURE) {
 		RETURN_FALSE;
 	}
 	amf3_chunk_t *begin = amf3_initChunk();
@@ -1131,7 +1131,7 @@ PHP_FUNCTION(amf3_encode) {
 	amf3_env_t env;
 
 	amf3_initEnv(&env, 0);
-	int size = amf3_encodeVal(&current, val, &env TSRMLS_CC);
+	int size = amf3_encodeVal(&current, val, &env);
 	amf3_destroyEnv(&env);
 
 	char *buf = (char *)emalloc(size);
@@ -1147,12 +1147,12 @@ PHP_FUNCTION(amf3_decode) {
 	char *data;
 	size_t size;
 	zval *count = NULL;
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|z/", &data, &size, &count) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS(), "s|z/", &data, &size, &count) == FAILURE) {
 		RETURN_FALSE;
 	}
 	amf3_env_t env;
 	amf3_initEnv(&env, 1);
-	int res = amf3_decodeVal(return_value, data, 0, size, &env TSRMLS_CC);
+	int res = amf3_decodeVal(return_value, data, 0, size, &env);
 	amf3_destroyEnv(&env);
 	if (count) {
 		zval_dtor(count);
