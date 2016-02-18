@@ -820,9 +820,6 @@ static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf
 
 		if (traits->ce) {
 			object_init_ex(val, traits->ce);
-			if (traits->ce->constructor) {
-				zend_call_method(val, traits->ce, &traits->ce->constructor, NULL, 0, NULL, 0, NULL, NULL);
-			}
 		} else {
 			object_init(val);
 		}

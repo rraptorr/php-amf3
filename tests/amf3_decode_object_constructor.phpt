@@ -20,7 +20,7 @@ var_dump($data);
 var_dump($count);
 ?>
 --EXPECT--
-object(DTO)#1 (5) {
+object(DTO)#1 (4) {
   ["private":"DTO":private]=>
   string(13) "private value"
   ["protected":protected]=>
@@ -29,7 +29,5 @@ object(DTO)#1 (5) {
   string(5) "value"
   ["id"]=>
   int(678)
-  ["extra"]=>
-  int(123)
 }
 int(25)
