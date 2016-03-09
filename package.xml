@@ -5,7 +5,7 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
   <name>amf3</name>
-  <uri>https://github.com/rraptorr/php-amf3/archive/v0.2.0</uri>
+  <uri>https://github.com/rraptorr/php-amf3/archive/v0.2.1.tar.gz</uri>
   <summary>PHP AMF3 extension</summary>
   <description>
     PHP AMF3 extensions offers two functions to encode/decode PHP
@@ -23,9 +23,9 @@
     <email>arseny.vakhrushev@gmail.com</email>
     <active>no</active>
   </developer>
-  <date>2014-03-06</date>
+  <date>2016-03-09</date>
   <version>
-    <release>0.2.0</release>
+    <release>0.2.1</release>
     <api>0.2.0</api>
   </version>
   <stability>
@@ -34,7 +34,8 @@
   </stability>
   <license filesource="LICENSE">GPLv2</license>
   <notes>
-- Support for byte array decoding
+- Several cleanups
+- Support for DateTimeImmutable
   </notes>
   <contents>
     <dir name="/">
@@ -51,9 +52,9 @@
         <file role="test" name="amf3_decode_array_nested_error.phpt"/>
         <file role="test" name="amf3_decode_array_reference.phpt"/>
         <file role="test" name="amf3_decode_bool.phpt"/>
-        <file role="test" name="amf3_decode_byte_array.phpt"/>
         <file role="test" name="amf3_decode_byte_array_invalid.phpt"/>
         <file role="test" name="amf3_decode_byte_array_invalid_reference.phpt"/>
+        <file role="test" name="amf3_decode_byte_array.phpt"/>
         <file role="test" name="amf3_decode_byte_array_reference.phpt"/>
         <file role="test" name="amf3_decode_date_invalid.phpt"/>
         <file role="test" name="amf3_decode_date.phpt"/>
@@ -86,6 +87,7 @@
         <file role="test" name="amf3_encode_array_empty.phpt"/>
         <file role="test" name="amf3_encode_array_reference.phpt"/>
         <file role="test" name="amf3_encode_bool.phpt"/>
+        <file role="test" name="amf3_encode_date_immutable.phpt"/>
         <file role="test" name="amf3_encode_date.phpt"/>
         <file role="test" name="amf3_encode_float.phpt"/>
         <file role="test" name="amf3_encode_int.phpt"/>
@@ -106,7 +108,7 @@
   <dependencies>
     <required>
       <php>
-        <min>5.3.0</min>
+        <min>5.5.0</min>
       </php>
       <pearinstaller>
         <min>1.9.0</min>
@@ -116,6 +118,20 @@
   <providesextension>amf3</providesextension>
   <extsrcrelease/>
   <changelog>
+    <release>
+      <date>2014-03-06</date>
+      <version>
+        <release>0.2.0</release>
+        <api>0.2.0</api>
+      </version>
+      <stability>
+        <release>beta</release>
+        <api>beta</api>
+      </stability>
+      <notes>
+- Support for byte array decoding
+      </notes>
+    </release>
     <release>
       <date>2013-03-13</date>
       <version>
