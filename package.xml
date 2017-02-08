@@ -61,6 +61,7 @@
         <file role="test" name="amf3_decode_int.phpt"/>
         <file role="test" name="amf3_decode_null.phpt"/>
         <file role="test" name="amf3_decode_object_anonymous.phpt"/>
+        <file role="test" name="amf3_decode_object_anonymous_field_reference.phpt"/>
         <file role="test" name="amf3_decode_object_anonymous_reference.phpt"/>
         <file role="test" name="amf3_decode_object_autoload.phpt"/>
         <file role="test" name="amf3_decode_object_constructor.phpt"/>
