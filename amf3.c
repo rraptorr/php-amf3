@@ -923,7 +923,7 @@ static int amf3_decodeVal(zval *val, const char *data, int pos, int size, amf3_e
 		return -1;
 	}
 	int oldPos = pos;
-	amf3_type_t type = (unsigned int)data[pos++];
+	amf3_type_t type = (uint8_t)data[pos++];
 	switch (type) {
 		case AMF3_UNDEFINED:
 		case AMF3_NULL:
