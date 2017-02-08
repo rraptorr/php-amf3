@@ -373,7 +373,7 @@ static int amf3_decodeStr(const char **str, unsigned int *len, const char *buf, 
 	}
 	if (!(pfx & 1)) { // decode as a reference
 		zval *val;
-		if ((val = zend_hash_index_find(&env->strs, pfx >> 1)) != NULL) {
+		if ((val = zend_hash_index_find(&env->strs, pfx >> 1)) == NULL) {
 			return -1;
 		}
 		*str = Z_STRVAL_P(val);
