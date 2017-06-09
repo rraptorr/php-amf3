@@ -687,6 +687,9 @@ static int amf3_decodeArray(zval *val, const char *data, int pos, int size, amf3
 			return -1;
 		}
 		array_init(val);
+#if PHP_VERSION_ID >= 70200
+		HT_ALLOW_COW_VIOLATION(Z_ARRVAL_P(val));
+#endif
 		amf3_putRef(&env->objs, val);
 		const char *key;
 		unsigned int keyLen;
