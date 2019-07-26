@@ -788,7 +788,7 @@ static int amf3_decodeObject(zval *val, const char *data, int pos, int size, amf
 			if (keyLen) {
 				// do not try to autoload class, autoloading based on user supplied data is a bad idea
 				zend_string *str = zend_string_init(key, keyLen, 0);
-				traits->ce = zend_lookup_class_ex(str, NULL, 0);
+				traits->ce = zend_fetch_class(str, ZEND_FETCH_CLASS_NO_AUTOLOAD);
 				zend_string_release(str);
 				if (traits->ce == NULL) {
 					php_error_docref(NULL, E_WARNING, "Unable to find class at position %d", pos - res);
