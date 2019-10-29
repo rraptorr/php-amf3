@@ -21,7 +21,7 @@
 #ifndef PHP_AMF3_H
 #define PHP_AMF3_H
 
-#define PHP_AMF3_VERSION "0.3.2"
+#define PHP_AMF3_VERSION "0.3.3"
 
 extern zend_module_entry amf3_module_entry;
 
