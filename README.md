@@ -25,8 +25,7 @@ mixed amf3_decode(string data [, int &count])
 Required PHP version
 --------------------
 
-This branch is only for PHP 7. It is a work in progress and does not work properly yet.
-For PHP 5 support see 'php5' branch.
+This module works with PHP 7.1, 7.2, 7.3 and 7.4.
 
 Installation
 ------------
