@@ -408,7 +408,11 @@ static int amf3_encodeDate(amf3_chunk_t **chunk, zval *val, amf3_env_t *env) {
 		zval return_value;
 		double date;
 
-		zend_call_method_with_0_params(val, NULL, NULL, "getTimestamp", &return_value);
+#if PHP_VERSION_ID >= 80000
+		zend_call_method_with_0_params(Z_OBJ_P(val), NULL, NULL, "gettimestamp", &return_value);
+#else
+		zend_call_method_with_0_params(val, NULL, NULL, "gettimestamp", &return_value);
+#endif
 
 		pos += amf3_encodeU29(chunk, 1);
 		date = Z_LVAL(return_value);
@@ -475,7 +479,11 @@ static int amf3_encodeXml(amf3_chunk_t **chunk, zval *val, amf3_env_t *env) {
 		zval xml;
 		int xmlLen;
 
-		zend_call_method_with_0_params(val, NULL, NULL, "asXML", &xml);
+#if PHP_VERSION_ID >= 80000
+		zend_call_method_with_0_params(Z_OBJ_P(val), NULL, NULL, "asxml", &xml);
+#else
+		zend_call_method_with_0_params(val, NULL, NULL, "asxml", &xml);
+#endif
 
 		xmlLen = Z_STRLEN(xml);
 		if (xmlLen > AMF3_MAX_INT) {
@@ -707,6 +715,9 @@ static int amf3_decodeArray(zval *val, const char *data, int pos, int size, amf3
 
 			res = amf3_decodeVal(&hv, data, pos, size, env);
 			if (res > 0) { // need a trailing \0 in the key buffer to do a proper call to 'add_assoc_zval_ex'
+#if PHP_VERSION_ID >= 70400
+				HT_ALLOW_COW_VIOLATION(Z_ARRVAL_P(val));
+#endif
 				add_assoc_zval_ex(val, key, keyLen, &hv);
 			} else {
 				return -1; // nested error
@@ -716,6 +727,9 @@ static int amf3_decodeArray(zval *val, const char *data, int pos, int size, amf3
 		while (pfx-- > 0) {
 			res = amf3_decodeVal(&hv, data, pos, size, env);
 			if (res > 0) {
+#if PHP_VERSION_ID >= 70400
+				HT_ALLOW_COW_VIOLATION(Z_ARRVAL_P(val));
+#endif
 				add_next_index_zval(val, &hv);
 			} else {
 				return -1; // nested error
