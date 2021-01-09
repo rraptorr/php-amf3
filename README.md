@@ -25,7 +25,7 @@ mixed amf3_decode(string data [, int &count])
 Required PHP version
 --------------------
 
-This module works with PHP 7.1, 7.2, 7.3 and 7.4.
+This module works with PHP 7.3, 7.4 and 8.0.
 
 Installation
 ------------
