@@ -5,7 +5,7 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0 http://pear.php.net/dtd/tasks-1.0.xsd http://pear.php.net/dtd/package-2.0 http://pear.php.net/dtd/package-2.0.xsd">
   <name>amf3</name>
-  <uri>https://github.com/rraptorr/php-amf3/archive/v0.3.3.tar.gz</uri>
+  <uri>https://github.com/rraptorr/php-amf3/archive/v0.4.0.tar.gz</uri>
   <summary>PHP AMF3 extension</summary>
   <description>
     PHP AMF3 extensions offers two functions to encode/decode PHP
@@ -23,9 +23,9 @@
     <email>arseny.vakhrushev@gmail.com</email>
     <active>no</active>
   </developer>
-  <date>2019-10-29</date>
+  <date>2021-01-09</date>
   <version>
-    <release>0.3.3</release>
+    <release>0.4.0</release>
     <api>0.2.0</api>
   </version>
   <stability>
@@ -34,7 +34,8 @@
   </stability>
   <license filesource="LICENSE">GPLv2</license>
   <notes>
-- PHP 7.4 support
+- PHP 8.0 support
+- Drop PHP 7.0, 7.1 and 7.2 support
   </notes>
   <contents>
     <dir name="/">
@@ -108,7 +109,7 @@
   <dependencies>
     <required>
       <php>
-        <min>7.0.0</min>
+        <min>7.3.0</min>
       </php>
       <pearinstaller>
         <min>1.9.0</min>
@@ -118,6 +119,20 @@
   <providesextension>amf3</providesextension>
   <extsrcrelease/>
   <changelog>
+    <release>
+      <date>2019-10-29</date>
+      <version>
+        <release>0.3.3</release>
+        <api>0.2.0</api>
+      </version>
+      <stability>
+        <release>beta</release>
+        <api>stable</api>
+      </stability>
+      <notes>
+- PHP 7.4 support
+      </notes>
+    </release>
     <release>
       <date>2017-09-04</date>
       <version>
