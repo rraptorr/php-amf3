@@ -28,11 +28,7 @@
 #include <ext/date/php_date.h>
 #include "php_amf3.h"
 
-#if PHP_VERSION_ID >= 70200
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_amf3_encode, 0, 1, IS_STRING, 1)
-#else
-ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_amf3_encode, 0, 1, IS_STRING, 0, 1)
-#endif
 	ZEND_ARG_INFO(0, value)
 ZEND_END_ARG_INFO()
 
@@ -695,9 +691,7 @@ static int amf3_decodeArray(zval *val, const char *data, int pos, int size, amf3
 			return -1;
 		}
 		array_init(val);
-#if PHP_VERSION_ID >= 70200
 		HT_ALLOW_COW_VIOLATION(Z_ARRVAL_P(val));
-#endif
 		amf3_putRef(&env->objs, val);
 		const char *key;
 		unsigned int keyLen;
